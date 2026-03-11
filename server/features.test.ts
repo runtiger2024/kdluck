@@ -168,6 +168,10 @@ vi.mock("./db", () => {
     createNote: vi.fn().mockResolvedValue(2),
     updateNote: vi.fn(),
     deleteNote: vi.fn(),
+    getCertificateByUserAndCourse: vi.fn().mockResolvedValue(null),
+    getCertificateByNo: vi.fn().mockResolvedValue(null),
+    getUserCertificates: vi.fn().mockResolvedValue([]),
+    createCertificate: vi.fn(),
     getApiConfig: vi.fn().mockResolvedValue({
       ecpayMerchantId: "3002607",
       ecpayHashKey: "pwFHCqoQZGmho4w6",
@@ -199,6 +203,11 @@ vi.mock("./line", () => ({
   pushMessage: vi.fn().mockResolvedValue(true),
   multicastMessage: vi.fn().mockResolvedValue({ success: 1, failed: 0 }),
   broadcastMessage: vi.fn().mockResolvedValue(true),
+}));
+
+// Mock certificate generator
+vi.mock("./certificateGenerator", () => ({
+  generateCertificatePdf: vi.fn().mockResolvedValue({ url: "https://cdn.example.com/cert.pdf", key: "certs/test.pdf" }),
 }));
 
 // Mock LLM
@@ -1277,5 +1286,139 @@ describe("Protected API - Notes", () => {
   it("denies anonymous access to notes", async () => {
     const caller = appRouter.createCaller(createPublicContext());
     await expect(caller.note.all()).rejects.toThrow();
+  });
+});
+
+// ─── Certificate Tests ───
+describe("Protected API - Certificate", () => {
+  it("checks certificate eligibility - not enough progress", async () => {
+    const db = await import("./db");
+    // checkEligibility calls: isEnrolled (default false - skip), getLessonsByCourse, getProgressByCourse
+    (db.isEnrolled as any).mockResolvedValueOnce(true);
+    (db.getLessonsByCourse as any).mockResolvedValueOnce([
+      { id: 1 }, { id: 2 }, { id: 3 }, { id: 4 }, { id: 5 },
+    ]);
+    (db.getProgressByCourse as any).mockResolvedValueOnce([
+      { lessonId: 1, completed: true },
+      { lessonId: 2, completed: true },
+    ]);
+
+    const caller = appRouter.createCaller(createUserContext());
+    const result = await caller.certificate.check({ courseId: 1 });
+    expect(result.eligible).toBe(false);
+    expect(result.reason).toContain("80%");
+  });
+
+  it("checks certificate eligibility - eligible", async () => {
+    const db = await import("./db");
+    (db.isEnrolled as any).mockResolvedValueOnce(true);
+    (db.getLessonsByCourse as any).mockResolvedValueOnce([
+      { id: 1 }, { id: 2 }, { id: 3 }, { id: 4 }, { id: 5 },
+    ]);
+    (db.getProgressByCourse as any).mockResolvedValueOnce([
+      { lessonId: 1, completed: true },
+      { lessonId: 2, completed: true },
+      { lessonId: 3, completed: true },
+      { lessonId: 4, completed: true },
+    ]);
+    (db.getCertificateByUserAndCourse as any).mockResolvedValueOnce(null);
+
+    const caller = appRouter.createCaller(createUserContext());
+    const result = await caller.certificate.check({ courseId: 1 });
+    expect(result.eligible).toBe(true);
+  });
+
+  it("generates certificate for eligible user", async () => {
+    const db = await import("./db");
+    (db.getCertificateByUserAndCourse as any).mockResolvedValueOnce(null); // no existing
+    (db.getLessonsByCourse as any).mockResolvedValueOnce([
+      { id: 1 }, { id: 2 }, { id: 3 }, { id: 4 }, { id: 5 },
+    ]);
+    (db.getProgressByCourse as any).mockResolvedValueOnce([
+      { lessonId: 1, completed: true },
+      { lessonId: 2, completed: true },
+      { lessonId: 3, completed: true },
+      { lessonId: 4, completed: true },
+      { lessonId: 5, completed: true },
+    ]);
+    (db.getCourseById as any).mockResolvedValueOnce({
+      id: 1, title: "React 入門", instructorId: 1,
+    });
+    (db.getInstructorById as any).mockResolvedValueOnce({
+      id: 1, name: "王老師",
+    });
+    (db.getCertificateByUserAndCourse as any).mockResolvedValueOnce({
+      id: 1, certificateNo: "KDL-TEST-001", userName: "Test User",
+      courseName: "React 入門", pdfUrl: "https://cdn.example.com/cert.pdf",
+    });
+
+    const caller = appRouter.createCaller(createUserContext());
+    const result = await caller.certificate.generate({ courseId: 1 });
+    expect(result.success).toBe(true);
+    expect(result.certificate).toBeDefined();
+    expect(db.createCertificate).toHaveBeenCalled();
+  });
+
+  it("returns existing certificate without regenerating", async () => {
+    const db = await import("./db");
+    const existingCert = {
+      id: 1, certificateNo: "KDL-EXIST-001", userName: "Test User",
+      courseName: "React 入門", pdfUrl: "https://cdn.example.com/cert.pdf",
+    };
+    (db.getCertificateByUserAndCourse as any).mockResolvedValueOnce(existingCert);
+
+    const caller = appRouter.createCaller(createUserContext());
+    const result = await caller.certificate.generate({ courseId: 1 });
+    expect(result.success).toBe(true);
+    expect(result.certificate).toHaveProperty("certificateNo");
+  });
+
+  it("rejects certificate generation with insufficient progress", async () => {
+    const db = await import("./db");
+    // First call: getCertificateByUserAndCourse returns null (no existing cert)
+    (db.getCertificateByUserAndCourse as any).mockResolvedValueOnce(null);
+    (db.getLessonsByCourse as any).mockResolvedValueOnce([
+      { id: 1 }, { id: 2 }, { id: 3 }, { id: 4 }, { id: 5 },
+    ]);
+    (db.getProgressByCourse as any).mockResolvedValueOnce([
+      { lessonId: 1, completed: true },
+    ]);
+
+    const caller = appRouter.createCaller(createUserContext());
+    await expect(
+      caller.certificate.generate({ courseId: 1 })
+    ).rejects.toThrow("完成率未達 80%");
+  });
+
+  it("lists user certificates", async () => {
+    const caller = appRouter.createCaller(createUserContext());
+    const result = await caller.certificate.myList();
+    expect(Array.isArray(result)).toBe(true);
+  });
+
+  it("verifies certificate by number - not found", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    const result = await caller.certificate.verify({ certificateNo: "KDL-FAKE-001" });
+    expect(result.valid).toBe(false);
+  });
+
+  it("verifies certificate by number - found", async () => {
+    const db = await import("./db");
+    (db.getCertificateByNo as any).mockResolvedValueOnce({
+      id: 1, certificateNo: "KDL-REAL-001", userName: "Test User",
+      courseName: "React 入門", completedAt: new Date(),
+    });
+
+    const caller = appRouter.createCaller(createPublicContext());
+    const result = await caller.certificate.verify({ certificateNo: "KDL-REAL-001" });
+    expect(result.valid).toBe(true);
+    expect(result.certificate).toBeDefined();
+  });
+
+  it("denies anonymous access to generate certificate", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    await expect(
+      caller.certificate.generate({ courseId: 1 })
+    ).rejects.toThrow();
   });
 });

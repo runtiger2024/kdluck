@@ -20,6 +20,7 @@ import {
   announcements, InsertAnnouncement,
   courseFaqs, InsertCourseFaq,
   courseNotes, InsertCourseNote,
+  certificates, InsertCertificate,
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -876,4 +877,43 @@ export async function getAllNotesByUser(userId: number) {
   return db.select().from(courseNotes)
     .where(eq(courseNotes.userId, userId))
     .orderBy(desc(courseNotes.createdAt));
+}
+
+// ─── Certificates (學習證書) ───
+export async function createCertificate(data: InsertCertificate) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(certificates).values(data);
+}
+
+export async function getCertificateByUserAndCourse(userId: number, courseId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(certificates)
+    .where(and(eq(certificates.userId, userId), eq(certificates.courseId, courseId)))
+    .limit(1);
+  return result[0];
+}
+
+export async function getCertificateByNo(certificateNo: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(certificates)
+    .where(eq(certificates.certificateNo, certificateNo))
+    .limit(1);
+  return result[0];
+}
+
+export async function getUserCertificates(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(certificates)
+    .where(eq(certificates.userId, userId))
+    .orderBy(desc(certificates.issuedAt));
+}
+
+export async function updateCertificate(id: number, data: Partial<InsertCertificate>) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(certificates).set(data).where(eq(certificates.id, id));
 }

@@ -50,6 +50,13 @@
       "when": 1773226741713,
       "tag": "0006_solid_mesmero",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "5",
+      "when": 1773229041439,
+      "tag": "0007_solid_grim_reaper",
+      "breakpoints": true
     }
   ]
 }

@@ -26,7 +26,8 @@ export function registerLineRoutes(app: Express) {
 
       const origin = req.query.origin as string || `${req.protocol}://${req.get("host")}`;
       const returnPath = req.query.returnPath as string || "/";
-      const state = Buffer.from(JSON.stringify({ origin, returnPath })).toString("base64url");
+      const mode = req.query.mode as string || "login"; // "login" or "bind"
+      const state = Buffer.from(JSON.stringify({ origin, returnPath, mode })).toString("base64url");
       const nonce = crypto.randomBytes(16).toString("hex");
 
       const redirectUri = `${origin}/api/line/callback`;
@@ -58,7 +59,7 @@ export function registerLineRoutes(app: Express) {
       }
 
       // 解析 state
-      let stateData: { origin: string; returnPath: string };
+      let stateData: { origin: string; returnPath: string; mode?: string };
       try {
         stateData = JSON.parse(Buffer.from(state, "base64url").toString());
       } catch {
@@ -82,8 +83,31 @@ export function registerLineRoutes(app: Express) {
       // 從 id_token 解析 email
       const idTokenData = parseLineIdToken(tokenResponse.id_token);
 
-      // 建立或更新使用者
-      // 使用 LINE userId 作為 openId 的前綴，避免與 Manus OAuth 衝突
+      // 判斷是綁定模式還是登入模式
+      if (stateData.mode === "bind") {
+        // 綁定模式：將 LINE 帳號綁定到已登入的用戶
+        let currentUser = null;
+        try { currentUser = await sdk.authenticateRequest(req); } catch {}
+        if (currentUser) {
+          await db.updateUserProfile(currentUser.id, {
+            avatarUrl: currentUser.avatarUrl || profile.pictureUrl || undefined,
+          });
+          // 更新 lineUserId
+          const dbInstance = await (await import("./db")).getDb?.() ?? null;
+          if (dbInstance) {
+            const { users } = await import("../drizzle/schema");
+            const { eq } = await import("drizzle-orm");
+            await dbInstance.update(users).set({ lineUserId: profile.userId }).where(eq(users.id, currentUser.id));
+          }
+          console.log(`[LINE Bind] User ${currentUser.id} bound to LINE ${profile.userId}`);
+          res.redirect(302, `${stateData.returnPath || "/member"}?line_bind=success`);
+        } else {
+          res.redirect(302, `${stateData.returnPath || "/member"}?line_bind=failed`);
+        }
+        return;
+      }
+
+      // 登入模式：建立或更新使用者
       const lineOpenId = `line_${profile.userId}`;
 
       await db.upsertUser({

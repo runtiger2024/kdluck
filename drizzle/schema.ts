@@ -326,3 +326,22 @@ export const courseNotes = mysqlTable("course_notes", {
 
 export type CourseNote = typeof courseNotes.$inferSelect;
 export type InsertCourseNote = typeof courseNotes.$inferInsert;
+
+// ─── Certificates (學習證書) ───
+export const certificates = mysqlTable("certificates", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  courseId: int("courseId").notNull(),
+  certificateNo: varchar("certificateNo", { length: 64 }).notNull().unique(),
+  userName: varchar("userName", { length: 256 }).notNull(),
+  courseName: varchar("courseName", { length: 512 }).notNull(),
+  instructorName: varchar("instructorName", { length: 256 }),
+  completedAt: timestamp("completedAt").notNull(),
+  pdfUrl: varchar("pdfUrl", { length: 1024 }),
+  pdfKey: varchar("pdfKey", { length: 512 }),
+  issuedAt: timestamp("issuedAt").defaultNow().notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type Certificate = typeof certificates.$inferSelect;
+export type InsertCertificate = typeof certificates.$inferInsert;

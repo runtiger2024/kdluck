@@ -20,9 +20,11 @@ import MemberOrders from "./pages/member/MemberOrders";
 import MemberRecommend from "./pages/member/MemberRecommend";
 import MemberWishlist from "./pages/member/MemberWishlist";
 import MemberNotes from "./pages/member/MemberNotes";
+import MemberCertificates from "./pages/member/MemberCertificates";
 
 // Static pages
 import About from "./pages/About";
+import CertificateVerify from "./pages/CertificateVerify";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 
@@ -79,6 +81,9 @@ function Router() {
       <Route path="/member/notes">
         <MemberLayout><MemberNotes /></MemberLayout>
       </Route>
+      <Route path="/member/certificates">
+        <MemberLayout><MemberCertificates /></MemberLayout>
+      </Route>
       <Route path="/member/recommend">
         <MemberLayout><MemberRecommend /></MemberLayout>
       </Route>
@@ -126,6 +131,9 @@ function Router() {
       <Route path="/admin/settings">
         <AdminLayout><AdminSettings /></AdminLayout>
       </Route>
+
+      {/* Certificate Verify */}
+      <Route path="/certificate/verify" component={CertificateVerify} />
 
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />

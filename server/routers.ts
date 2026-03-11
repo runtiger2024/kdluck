@@ -1011,6 +1011,84 @@ const noteRouter = router({
   }),
 });
 
+// ─── Certificate Router ───
+const certificateRouter = router({
+  // 檢查用戶是否已完成課程並可以獲取證書
+  check: protectedProcedure.input(z.object({ courseId: z.number() })).query(async ({ input, ctx }) => {
+    // 檢查是否已註冊
+    const enrolled = await db.isEnrolled(ctx.user.id, input.courseId);
+    if (!enrolled) return { eligible: false, reason: "尚未購買此課程" };
+    // 檢查完成率
+    const allLessons = await db.getLessonsByCourse(input.courseId);
+    const progress = await db.getProgressByCourse(ctx.user.id, input.courseId);
+    const completedCount = progress.filter(p => p.completed).length;
+    const totalCount = allLessons.length;
+    if (totalCount === 0) return { eligible: false, reason: "課程尚無課時內容" };
+    const completionRate = completedCount / totalCount;
+    if (completionRate < 0.8) return { eligible: false, reason: `完成率需達 80% 以上（目前 ${Math.round(completionRate * 100)}%）`, completionRate };
+    // 檢查是否已有證書
+    const existing = await db.getCertificateByUserAndCourse(ctx.user.id, input.courseId);
+    return { eligible: true, certificate: existing || null, completionRate };
+  }),
+
+  // 產生證書
+  generate: protectedProcedure.input(z.object({ courseId: z.number() })).mutation(async ({ input, ctx }) => {
+    // 檢查是否已有證書
+    const existing = await db.getCertificateByUserAndCourse(ctx.user.id, input.courseId);
+    if (existing) return { success: true, certificate: existing };
+    // 檢查完成率
+    const allLessons = await db.getLessonsByCourse(input.courseId);
+    const progress = await db.getProgressByCourse(ctx.user.id, input.courseId);
+    const completedCount = progress.filter(p => p.completed).length;
+    if (allLessons.length === 0 || completedCount / allLessons.length < 0.8) {
+      throw new TRPCError({ code: "BAD_REQUEST", message: "完成率未達 80%，無法產生證書" });
+    }
+    // 取得課程資訊
+    const course = await db.getCourseById(input.courseId);
+    if (!course) throw new TRPCError({ code: "NOT_FOUND", message: "課程不存在" });
+    const instructor = course.instructorId ? await db.getInstructorById(course.instructorId) : null;
+    // 產生證書編號
+    const certificateNo = `KDL-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+    const now = new Date();
+    // 產生 PDF
+    const { generateCertificatePdf } = await import("./certificateGenerator");
+    const { url: pdfUrl, key: pdfKey } = await generateCertificatePdf({
+      certificateNo,
+      userName: ctx.user.name || "學員",
+      courseName: course.title,
+      instructorName: instructor?.name || "平台講師",
+      completedAt: now,
+      siteName: "KDLuck 凱迪拉課",
+    });
+    // 儲存證書記錄
+    await db.createCertificate({
+      userId: ctx.user.id,
+      courseId: input.courseId,
+      certificateNo,
+      userName: ctx.user.name || "學員",
+      courseName: course.title,
+      instructorName: instructor?.name || null,
+      completedAt: now,
+      pdfUrl,
+      pdfKey,
+    });
+    const cert = await db.getCertificateByUserAndCourse(ctx.user.id, input.courseId);
+    return { success: true, certificate: cert };
+  }),
+
+  // 用戶的所有證書
+  myList: protectedProcedure.query(async ({ ctx }) => {
+    return db.getUserCertificates(ctx.user.id);
+  }),
+
+  // 公開驗證證書
+  verify: publicProcedure.input(z.object({ certificateNo: z.string() })).query(async ({ input }) => {
+    const cert = await db.getCertificateByNo(input.certificateNo);
+    if (!cert) return { valid: false };
+    return { valid: true, certificate: cert };
+  }),
+});
+
 // ─── Main Router ───
 export const appRouter = router({
   system: systemRouter,
@@ -1038,6 +1116,7 @@ export const appRouter = router({
   announcement: announcementRouter,
   faq: faqRouter,
   note: noteRouter,
+  certificate: certificateRouter,
 });
 
 export type AppRouter = typeof appRouter;

@@ -1,0 +1,26 @@
+{
+  "query": "SELECT configKey, configValue FROM site_config WHERE configKey LIKE '%line%';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 28JPo3Vw26mPY6V.root --database XBhqXuJ2WiY8ShtDj5vvMz --execute SELECT configKey, configValue FROM site_config WHERE configKey LIKE '%line%';",
+  "rows": [
+    {
+      "configKey": "line_login_enabled",
+      "configValue": "true"
+    },
+    {
+      "configKey": "line_channel_id",
+      "configValue": "2009330400"
+    },
+    {
+      "configKey": "line_channel_secret",
+      "configValue": "7e3a1e359d0d6be963a8b8a5ae69eca4"
+    },
+    {
+      "configKey": "line_messaging_token",
+      "configValue": "h8VIm/Q0d93yXlD5lRKqM7AqmeoSBUHooB89hsLee7k5Mph9jexoepe0SfI6mtJVi2NaQuxPaGEJZ7qlPrIUH6CxLc1SceiO4nxB+sCQJi9+Z85O+vUWVE2vJlzinIoe4n1wkDwAm+DkJC8AXw5JLwdB04t89/1O/w1cDnyilFU="
+    }
+  ],
+  "messages": [],
+  "stdout": "configKey\tconfigValue\nline_login_enabled\ttrue\nline_channel_id\t2009330400\nline_channel_secret\t7e3a1e359d0d6be963a8b8a5ae69eca4\nline_messaging_token\th8VIm/Q0d93yXlD5lRKqM7AqmeoSBUHooB89hsLee7k5Mph9jexoepe0SfI6mtJVi2NaQuxPaGEJZ7qlPrIUH6CxLc1SceiO4nxB+sCQJi9+Z85O+vUWVE2vJlzinIoe4n1wkDwAm+DkJC8AXw5JLwdB04t89/1O/w1cDnyilFU=\n",
+  "stderr": "",
+  "execution_time_ms": 1644
+}

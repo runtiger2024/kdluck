@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { getLoginUrl } from "@/const";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import ShareButtons from "@/components/ShareButtons";
 
 export default function CourseDetail() {
   const params = useParams<{ slug: string }>();
@@ -258,6 +259,9 @@ export default function CourseDetail() {
                           {wishlistStatus?.inWishlist ? "已在願望清單" : "加入願望清單"}
                         </Button>
                       )}
+                      <div className="flex justify-center">
+                        <ShareButtons url={`/course/${course.slug || course.id}`} title={course.title} description={course.subtitle || course.description?.slice(0, 100)} />
+                      </div>
                     </div>
                   )}
                 </CardContent>

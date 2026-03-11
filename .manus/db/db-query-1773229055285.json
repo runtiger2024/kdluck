@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE `certificates` (\n\t`id` int AUTO_INCREMENT NOT NULL,\n\t`userId` int NOT NULL,\n\t`courseId` int NOT NULL,\n\t`certificateNo` varchar(64) NOT NULL,\n\t`userName` varchar(256) NOT NULL,\n\t`courseName` varchar(512) NOT NULL,\n\t`instructorName` varchar(256),\n\t`completedAt` timestamp NOT NULL,\n\t`pdfUrl` varchar(1024),\n\t`pdfKey` varchar(512),\n\t`issuedAt` timestamp NOT NULL DEFAULT (now()),\n\t`createdAt` timestamp NOT NULL DEFAULT (now()),\n\tCONSTRAINT `certificates_id` PRIMARY KEY(`id`),\n\tCONSTRAINT `certificates_certificateNo_unique` UNIQUE(`certificateNo`)\n);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 28JPo3Vw26mPY6V.root --database XBhqXuJ2WiY8ShtDj5vvMz --execute CREATE TABLE `certificates` (\n\t`id` int AUTO_INCREMENT NOT NULL,\n\t`userId` int NOT NULL,\n\t`courseId` int NOT NULL,\n\t`certificateNo` varchar(64) NOT NULL,\n\t`userName` varchar(256) NOT NULL,\n\t`courseName` varchar(512) NOT NULL,\n\t`instructorName` varchar(256),\n\t`completedAt` timestamp NOT NULL,\n\t`pdfUrl` varchar(1024),\n\t`pdfKey` varchar(512),\n\t`issuedAt` timestamp NOT NULL DEFAULT (now()),\n\t`createdAt` timestamp NOT NULL DEFAULT (now()),\n\tCONSTRAINT `certificates_id` PRIMARY KEY(`id`),\n\tCONSTRAINT `certificates_certificateNo_unique` UNIQUE(`certificateNo`)\n);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1889
+}
