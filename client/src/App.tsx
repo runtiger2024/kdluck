@@ -22,12 +22,14 @@ import MemberWishlist from "./pages/member/MemberWishlist";
 import MemberNotes from "./pages/member/MemberNotes";
 import MemberCertificates from "./pages/member/MemberCertificates";
 import MemberNotifications from "./pages/member/MemberNotifications";
+import MemberSecurity from "./pages/member/MemberSecurity";
 
 // Static pages
 import About from "./pages/About";
 import CertificateVerify from "./pages/CertificateVerify";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
+import AccountHelp from "./pages/AccountHelp";
 
 // Payment
 import PaymentResult from "./pages/PaymentResult";
@@ -89,6 +91,9 @@ function Router() {
       <Route path="/member/notifications">
         <MemberLayout><MemberNotifications /></MemberLayout>
       </Route>
+      <Route path="/member/security">
+        <MemberLayout><MemberSecurity /></MemberLayout>
+      </Route>
       <Route path="/member/recommend">
         <MemberLayout><MemberRecommend /></MemberLayout>
       </Route>
@@ -139,6 +144,9 @@ function Router() {
       <Route path="/admin/settings">
         <AdminLayout><AdminSettings /></AdminLayout>
       </Route>
+
+      {/* Account Help */}
+      <Route path="/account-help" component={AccountHelp} />
 
       {/* Certificate Verify */}
       <Route path="/certificate/verify" component={CertificateVerify} />

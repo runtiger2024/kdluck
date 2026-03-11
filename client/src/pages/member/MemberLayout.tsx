@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getLoginUrl } from "@/const";
 import { trpc } from "@/lib/trpc";
-import { User, BookOpen, ShoppingCart, Sparkles, Heart, StickyNote, Award, Bell } from "lucide-react";
+import { User, BookOpen, ShoppingCart, Sparkles, Heart, StickyNote, Award, Bell, Shield } from "lucide-react";
 import { useLocation } from "wouter";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -16,6 +16,7 @@ const menuItems = [
   { icon: StickyNote, label: "我的筆記", path: "/member/notes" },
   { icon: Award, label: "我的證書", path: "/member/certificates" },
   { icon: Bell, label: "通知中心", path: "/member/notifications" },
+  { icon: Shield, label: "帳號安全", path: "/member/security" },
   { icon: Sparkles, label: "推薦課程", path: "/member/recommend" },
 ];
 

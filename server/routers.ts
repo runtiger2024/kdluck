@@ -11,6 +11,7 @@ import { invokeLLM } from "./_core/llm";
 import { issueInvoice, voidInvoice } from "./amego";
 import { pushMessage, multicastMessage, broadcastMessage } from "./line";
 import { getApiConfig } from "./db";
+import { notifyPurchaseSuccess, notifyProofReviewResult, notifyCertificateIssued, notifyNewCourse } from "./notificationService";
 
 // ─── Auth Router ───
 const authRouter = router({
@@ -315,6 +316,15 @@ const orderRouter = router({
       });
       await db.createEnrollment({ userId: ctx.user.id, courseId: input.courseId });
       if (couponId) await db.incrementCouponUsage(couponId);
+
+      // 通知用戶（站內 + LINE + Email）
+      try {
+        const origin = ctx.req.headers.origin as string | undefined;
+        await notifyPurchaseSuccess(ctx.user.id, course.title, orderNo, origin);
+      } catch (e) {
+        console.warn("[Order] Free order notification failed:", e);
+      }
+
       return { orderNo, amount: 0, status: "paid" };
     }
 
@@ -374,13 +384,23 @@ const orderRouter = router({
   // Admin: confirm bank transfer payment
   confirmPayment: adminProcedure.input(z.object({
     orderNo: z.string(),
-  })).mutation(async ({ input }) => {
+  })).mutation(async ({ input, ctx }) => {
     const order = await db.getOrderByNo(input.orderNo);
     if (!order) throw new TRPCError({ code: "NOT_FOUND" });
     if (order.paymentStatus === "paid") throw new TRPCError({ code: "BAD_REQUEST", message: "已付款" });
     await db.updateOrderStatus(input.orderNo, "paid", "manual_confirm");
     await db.createEnrollment({ userId: order.userId, courseId: order.courseId });
     if (order.couponId) await db.incrementCouponUsage(order.couponId);
+
+    // 通知用戶購買成功（站內 + LINE + Email）
+    try {
+      const course = await db.getCourseById(order.courseId);
+      const origin = ctx.req.headers.origin as string | undefined;
+      await notifyPurchaseSuccess(order.userId, course?.title ?? "線上課程", input.orderNo, origin);
+    } catch (e) {
+      console.warn("[Order] Confirm payment notification failed:", e);
+    }
+
     return { success: true };
   }),
   // Admin: 審核付款憑證
@@ -397,6 +417,15 @@ const orderRouter = router({
       await db.createEnrollment({ userId: order.userId, courseId: order.courseId });
       if (order.couponId) await db.incrementCouponUsage(order.couponId);
     }
+
+    // 通知用戶審核結果（站內 + LINE）
+    try {
+      const origin = ctx.req.headers.origin as string | undefined;
+      await notifyProofReviewResult(order.userId, input.orderNo, input.approved, input.reviewNote, origin);
+    } catch (e) {
+      console.warn("[Order] Proof review notification failed:", e);
+    }
+
     return { success: true };
   }),
   // Admin: 待審核憑證列表
@@ -574,6 +603,20 @@ const userRouter = router({
   }).optional()).query(async ({ input }) => {
     return db.getAllUsers(input?.page, input?.limit);
   }),
+  // 管理員搜尋用戶
+  search: adminProcedure.input(z.object({
+    query: z.string().min(1),
+    page: z.number().optional(),
+    limit: z.number().optional(),
+  })).query(async ({ input }) => {
+    return db.searchUsers(input.query, input.page, input.limit);
+  }),
+  // 管理員查看用戶帳號詳情
+  accountDetail: adminProcedure.input(z.object({
+    userId: z.number(),
+  })).query(async ({ input }) => {
+    return db.getUserAccountDetail(input.userId);
+  }),
   updateRole: adminProcedure.input(z.object({
     userId: z.number(),
     role: z.enum(["user", "admin"]),
@@ -601,6 +644,41 @@ const userRouter = router({
   // 取得完整個人資料
   getProfile: protectedProcedure.query(async ({ ctx }) => {
     return db.getUserById(ctx.user.id);
+  }),
+  // 帳號安全資訊（用戶自己查看）
+  accountSecurity: protectedProcedure.query(async ({ ctx }) => {
+    const user = await db.getUserById(ctx.user.id);
+    if (!user) throw new TRPCError({ code: "NOT_FOUND" });
+    return {
+      loginMethod: user.loginMethod ?? "manus",
+      hasEmail: !!user.email,
+      email: user.email ? `${user.email.slice(0, 3)}***${user.email.slice(user.email.indexOf("@"))}` : null,
+      hasLineBinding: !!user.lineUserId,
+      hasPhone: !!user.phone,
+      phone: user.phone ? `${user.phone.slice(0, 4)}****${user.phone.slice(-2)}` : null,
+      createdAt: user.createdAt,
+      lastSignedIn: user.lastSignedIn,
+    };
+  }),
+  // 公開帳號查詢（透過 Email 查詢帳號狀態，不需登入）
+  lookupByEmail: publicProcedure.input(z.object({
+    email: z.string().email(),
+  })).query(async ({ input }) => {
+    const found = await db.findUserByEmail(input.email);
+    if (found.length === 0) {
+      return { found: false, accounts: [] };
+    }
+    // 只回傳脱敏資訊
+    return {
+      found: true,
+      accounts: found.map(u => ({
+        loginMethod: u.loginMethod ?? "manus",
+        hasLineBinding: !!u.lineUserId,
+        maskedName: u.name ? `${u.name.charAt(0)}${'*'.repeat(Math.max(0, (u.name.length || 1) - 1))}` : null,
+        createdAt: u.createdAt,
+        lastSignedIn: u.lastSignedIn,
+      })),
+    };
   }),
 });
 

@@ -143,6 +143,9 @@ vi.mock("./db", () => {
     getUsersWithLineId: vi.fn().mockResolvedValue([]),
     getUserById: vi.fn().mockImplementation((id: number) => Promise.resolve(id === 1 ? { id: 1, name: "Test", email: "test@example.com", phone: null, birthday: null, gender: null, city: null, address: null, bio: null, occupation: null, company: null, avatarUrl: null, lineUserId: "U123" } : null)),
     updateUserProfile: vi.fn(),
+    searchUsers: vi.fn().mockResolvedValue({ items: [{ id: 1, name: "Test", email: "test@example.com", phone: null, loginMethod: "manus", lineUserId: "U123", role: "user", createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date() }], total: 1 }),
+    getUserAccountDetail: vi.fn().mockImplementation((id: number) => Promise.resolve(id === 1 ? { id: 1, name: "Test", email: "test@example.com", phone: null, loginMethod: "manus", lineUserId: "U123", role: "user", createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date(), totalOrders: 3, totalSpent: "5970", enrolledCourseCount: 2, hasLineBinding: true } : null)),
+    findUserByEmail: vi.fn().mockImplementation((email: string) => Promise.resolve(email === "test@example.com" ? [{ id: 1, name: "Test", email: "test@example.com", loginMethod: "manus", lineUserId: "U123", createdAt: new Date(), lastSignedIn: new Date() }] : [])),
     getUserWishlist: vi.fn().mockResolvedValue([{ id: 1, courseId: 1, courseTitle: "React 入門", courseSlug: "react-intro", coursePrice: "1990.00", coverImageUrl: null }]),
     addToWishlist: vi.fn(),
     removeFromWishlist: vi.fn(),
@@ -1673,5 +1676,79 @@ describe("Admin Notification Push", () => {
         content: "Test content",
       })
     ).rejects.toThrow();
+  });
+});
+
+
+// ─── Account Security & Recovery Tests ───
+describe("User - Account Security", () => {
+  it("returns masked account security info for authenticated user", async () => {
+    const caller = appRouter.createCaller(createUserContext());
+    const result = await caller.user.accountSecurity();
+    expect(result.loginMethod).toBe("manus");
+    expect(result.hasEmail).toBe(true);
+    expect(result.email).toContain("***");
+    expect(result.hasLineBinding).toBe(true);
+  });
+
+  it("denies anonymous access to account security", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    await expect(caller.user.accountSecurity()).rejects.toThrow();
+  });
+});
+
+describe("User - Account Lookup (Public)", () => {
+  it("finds account by email with masked info", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    const result = await caller.user.lookupByEmail({ email: "test@example.com" });
+    expect(result.found).toBe(true);
+    expect(result.accounts).toHaveLength(1);
+    expect(result.accounts[0].loginMethod).toBe("manus");
+    expect(result.accounts[0].hasLineBinding).toBe(true);
+    // Name should be masked
+    expect(result.accounts[0].maskedName).toBe("T***");
+  });
+
+  it("returns not found for unknown email", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    const result = await caller.user.lookupByEmail({ email: "unknown@example.com" });
+    expect(result.found).toBe(false);
+    expect(result.accounts).toHaveLength(0);
+  });
+
+  it("rejects invalid email format", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    await expect(caller.user.lookupByEmail({ email: "not-an-email" })).rejects.toThrow();
+  });
+});
+
+describe("Admin - User Search", () => {
+  it("searches users by query", async () => {
+    const caller = appRouter.createCaller(createAdminContext());
+    const result = await caller.user.search({ query: "test" });
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0].name).toBe("Test");
+  });
+
+  it("denies non-admin access to user search", async () => {
+    const caller = appRouter.createCaller(createUserContext());
+    await expect(caller.user.search({ query: "test" })).rejects.toThrow();
+  });
+});
+
+describe("Admin - User Account Detail", () => {
+  it("returns full account detail for admin", async () => {
+    const caller = appRouter.createCaller(createAdminContext());
+    const result = await caller.user.accountDetail({ userId: 1 });
+    expect(result).not.toBeNull();
+    expect(result!.name).toBe("Test");
+    expect(result!.totalOrders).toBe(3);
+    expect(result!.enrolledCourseCount).toBe(2);
+    expect(result!.hasLineBinding).toBe(true);
+  });
+
+  it("denies non-admin access to account detail", async () => {
+    const caller = appRouter.createCaller(createUserContext());
+    await expect(caller.user.accountDetail({ userId: 1 })).rejects.toThrow();
   });
 });

@@ -132,6 +132,12 @@ export default function Navbar() {
               <Button size="sm" onClick={() => { window.location.href = getLoginUrl(); }}>
                 登入 / 註冊
               </Button>
+              <button
+                onClick={() => setLocation("/account-help")}
+                className="text-xs text-muted-foreground hover:text-primary transition-colors hidden md:inline"
+              >
+                帳號問題？
+              </button>
             </div>
           )}
 
@@ -175,6 +181,12 @@ export default function Navbar() {
                 className="block w-full px-3 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium text-center"
               >
                 登入 / 註冊
+              </button>
+              <button
+                onClick={() => { setLocation("/account-help"); setMobileOpen(false); }}
+                className="block w-full text-center text-xs text-muted-foreground hover:text-primary transition-colors py-1"
+              >
+                帳號問題？點此協助
               </button>
             </div>
           )}

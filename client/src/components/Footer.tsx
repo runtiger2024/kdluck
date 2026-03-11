@@ -21,6 +21,7 @@ export default function Footer() {
               <a href="/member" className="block hover:text-foreground transition-colors">會員中心</a>
               <a href="/member/wishlist" className="block hover:text-foreground transition-colors">願望清單</a>
               <a href="/member/orders" className="block hover:text-foreground transition-colors">我的訂單</a>
+              <a href="/account-help" className="block hover:text-foreground transition-colors">帳號問題協助</a>
             </div>
           </div>
           <div>

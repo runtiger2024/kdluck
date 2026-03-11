@@ -109,6 +109,61 @@ export async function updateUserProfile(userId: number, data: {
   await db.update(users).set(updateData).where(eq(users.id, userId));
 }
 
+// ─── User Search & Account Helpers ───
+export async function searchUsers(query: string, page = 1, limit = 20) {
+  const db = await getDb();
+  if (!db) return { items: [], total: 0 };
+  const offset = (page - 1) * limit;
+  const searchPattern = `%${query}%`;
+  const condition = sql`(${users.name} LIKE ${searchPattern} OR ${users.email} LIKE ${searchPattern} OR ${users.phone} LIKE ${searchPattern} OR CAST(${users.id} AS CHAR) = ${query})`;
+  const [items, countResult] = await Promise.all([
+    db.select().from(users).where(condition).orderBy(desc(users.createdAt)).limit(limit).offset(offset),
+    db.select({ count: sql<number>`COUNT(*)` }).from(users).where(condition),
+  ]);
+  return { items, total: countResult[0]?.count ?? 0 };
+}
+
+export async function getUserAccountDetail(userId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+  if (!user) return null;
+
+  // Get order count and total spent
+  const [orderStats] = await db.select({
+    totalOrders: sql<number>`COUNT(*)`,
+    totalSpent: sql<string>`COALESCE(SUM(CASE WHEN paymentStatus = 'paid' THEN amount ELSE 0 END), 0)`,
+  }).from(orders).where(eq(orders.userId, userId));
+
+  // Get enrolled course count
+  const [enrollStats] = await db.select({
+    courseCount: sql<number>`COUNT(*)`,
+  }).from(enrollments).where(eq(enrollments.userId, userId));
+
+  return {
+    ...user,
+    totalOrders: orderStats?.totalOrders ?? 0,
+    totalSpent: orderStats?.totalSpent ?? "0",
+    enrolledCourseCount: enrollStats?.courseCount ?? 0,
+    hasLineBinding: !!user.lineUserId,
+    loginMethod: user.loginMethod ?? "manus",
+  };
+}
+
+export async function findUserByEmail(email: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({
+    id: users.id,
+    name: users.name,
+    email: users.email,
+    loginMethod: users.loginMethod,
+    lineUserId: users.lineUserId,
+    createdAt: users.createdAt,
+    lastSignedIn: users.lastSignedIn,
+  }).from(users).where(eq(users.email, email));
+}
+
 // ─── Categories ───
 export async function getAllCategories() {
   const db = await getDb();

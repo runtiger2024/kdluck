@@ -10,6 +10,7 @@ import type { Express, Request, Response } from "express";
 import { generateECPayOrder, verifyCheckMacValue } from "./ecpay";
 import * as db from "./db";
 import { notifyOwner } from "./_core/notification";
+import { notifyPurchaseSuccess } from "./notificationService";
 
 export function registerECPayRoutes(app: Express) {
   /**
@@ -121,6 +122,20 @@ export function registerECPayRoutes(app: Express) {
           });
         } catch (e) {
           console.warn("[ECPay] Notify owner failed:", e);
+        }
+
+        // 通知用戶（站內 + LINE + Email）
+        try {
+          const origin = req.headers.origin || req.headers.referer?.replace(/\/$/, "");
+          await notifyPurchaseSuccess(
+            order.userId,
+            course?.title ?? "線上課程",
+            merchantTradeNo,
+            origin || undefined,
+          );
+          console.log(`[ECPay] Purchase notification sent for order ${merchantTradeNo}`);
+        } catch (e) {
+          console.warn("[ECPay] Notify user failed:", e);
         }
 
         console.log(`[ECPay] Order ${merchantTradeNo} paid successfully, trade: ${tradeNo}`);
