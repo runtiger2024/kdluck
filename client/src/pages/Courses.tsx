@@ -17,6 +17,8 @@ export default function Courses() {
 
   const [search, setSearch] = useState(params.get("search") ?? "");
   const [categoryId, setCategoryId] = useState(params.get("category") ?? "all");
+  const [level, setLevel] = useState("all");
+  const [sortBy, setSortBy] = useState("newest");
   const [page, setPage] = useState(1);
 
   const { data: categoriesList } = trpc.category.list.useQuery();
@@ -59,10 +61,29 @@ export default function Courses() {
               />
             </div>
             <Select value={categoryId} onValueChange={v => { setCategoryId(v); setPage(1); }}>
-              <SelectTrigger className="w-full md:w-48"><SelectValue placeholder="所有分類" /></SelectTrigger>
+              <SelectTrigger className="w-full md:w-40"><SelectValue placeholder="所有分類" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">所有分類</SelectItem>
                 {categoriesList?.map(c => <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={level} onValueChange={v => { setLevel(v); setPage(1); }}>
+              <SelectTrigger className="w-full md:w-32"><SelectValue placeholder="所有等級" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">所有等級</SelectItem>
+                <SelectItem value="beginner">入門</SelectItem>
+                <SelectItem value="intermediate">中級</SelectItem>
+                <SelectItem value="advanced">高級</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={sortBy} onValueChange={v => { setSortBy(v); setPage(1); }}>
+              <SelectTrigger className="w-full md:w-32"><SelectValue placeholder="排序" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="newest">最新上架</SelectItem>
+                <SelectItem value="popular">最多人學</SelectItem>
+                <SelectItem value="rating">最高評價</SelectItem>
+                <SelectItem value="price_low">價格低到高</SelectItem>
+                <SelectItem value="price_high">價格高到低</SelectItem>
               </SelectContent>
             </Select>
           </div>

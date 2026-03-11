@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Plus, Pencil, Trash2, GripVertical, Video, FileText } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, Trash2, GripVertical, Video, FileText, Upload, CheckCircle2, Image, HelpCircle } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useLocation, useParams } from "wouter";
@@ -21,6 +21,15 @@ export default function AdminCourseContent() {
   const { data: course } = trpc.course.getById.useQuery({ id: courseId });
   const { data: chaptersList } = trpc.chapter.listByCourse.useQuery({ courseId });
   const { data: lessonsList } = trpc.lesson.listByCourse.useQuery({ courseId });
+  const { data: faqsList } = trpc.faq.byCourse.useQuery({ courseId });
+
+  // FAQ dialog
+  const [faqDialog, setFaqDialog] = useState(false);
+  const [editingFaq, setEditingFaq] = useState<any>(null);
+  const [faqForm, setFaqForm] = useState({ question: "", answer: "", sortOrder: 0 });
+  const createFaq = trpc.faq.create.useMutation({ onSuccess: () => { utils.faq.byCourse.invalidate({ courseId }); setFaqDialog(false); toast.success("已新增 FAQ"); } });
+  const updateFaq = trpc.faq.update.useMutation({ onSuccess: () => { utils.faq.byCourse.invalidate({ courseId }); setFaqDialog(false); toast.success("已更新 FAQ"); } });
+  const deleteFaq = trpc.faq.delete.useMutation({ onSuccess: () => { utils.faq.byCourse.invalidate({ courseId }); toast.success("已刪除 FAQ"); } });
 
   // Chapter dialog
   const [chapterDialog, setChapterDialog] = useState(false);
@@ -34,6 +43,7 @@ export default function AdminCourseContent() {
   const [lessonForm, setLessonForm] = useState({
     title: "", description: "", videoUrl: "", videoKey: "", duration: 0, sortOrder: 0, isFreePreview: false,
   });
+  const [uploadProgress, setUploadProgress] = useState("");
 
   const createChapter = trpc.chapter.create.useMutation({
     onSuccess: () => { utils.chapter.listByCourse.invalidate({ courseId }); setChapterDialog(false); toast.success("章節已建立"); },
@@ -61,6 +71,11 @@ export default function AdminCourseContent() {
   const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.size > 500 * 1024 * 1024) {
+      toast.error("影片檔案不得超過 500MB");
+      return;
+    }
+    setUploadProgress(`正在上傳 ${file.name} (${(file.size / 1024 / 1024).toFixed(1)} MB)...`);
     const reader = new FileReader();
     reader.onload = async () => {
       const base64 = (reader.result as string).split(",")[1];
@@ -71,9 +86,35 @@ export default function AdminCourseContent() {
           contentType: file.type,
         });
         setLessonForm(f => ({ ...f, videoUrl: result.url, videoKey: result.key }));
+        setUploadProgress("");
         toast.success("影片上傳成功");
       } catch {
-        toast.error("影片上傳失敗");
+        setUploadProgress("");
+        toast.error("影片上傳失敗，請確認檔案大小並重試");
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleAttachmentUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 50 * 1024 * 1024) {
+      toast.error("附件檔案不得超過 50MB");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const base64 = (reader.result as string).split(",")[1];
+      try {
+        const result = await uploadMutation.mutateAsync({
+          key: `attachments/${courseId}/${Date.now()}-${file.name}`,
+          base64Data: base64,
+          contentType: file.type,
+        });
+        toast.success(`附件 ${file.name} 上傳成功，URL: ${result.url}`);
+      } catch {
+        toast.error("附件上傳失敗");
       }
     };
     reader.readAsDataURL(file);
@@ -182,6 +223,77 @@ export default function AdminCourseContent() {
         );
       })}
 
+      {/* FAQ Section */}
+      <Card className="bg-card border-border">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div className="flex items-center gap-3">
+            <HelpCircle className="h-5 w-5 text-primary" />
+            <CardTitle className="text-lg">常見問題 (FAQ)</CardTitle>
+            <Badge variant="secondary">{faqsList?.length ?? 0} 題</Badge>
+          </div>
+          <Button size="sm" onClick={() => { setEditingFaq(null); setFaqForm({ question: "", answer: "", sortOrder: faqsList?.length ?? 0 }); setFaqDialog(true); }}>
+            <Plus className="h-4 w-4 mr-1" />新增
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {faqsList?.length === 0 && <p className="text-center py-4 text-muted-foreground text-sm">尚未新增常見問題</p>}
+          <div className="space-y-2">
+            {faqsList?.map(faq => (
+              <div key={faq.id} className="p-3 rounded-lg bg-secondary/50 hover:bg-secondary/80 transition-colors">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1">
+                    <p className="font-medium text-sm">Q: {faq.question}</p>
+                    <p className="text-sm text-muted-foreground mt-1">A: {faq.answer}</p>
+                  </div>
+                  <div className="flex gap-1 shrink-0">
+                    <Button variant="ghost" size="sm" onClick={() => { setEditingFaq(faq); setFaqForm({ question: faq.question, answer: faq.answer, sortOrder: faq.sortOrder }); setFaqDialog(true); }}>
+                      <Pencil className="h-3 w-3" />
+                    </Button>
+                    <Button variant="ghost" size="sm" className="text-destructive" onClick={() => { if (confirm("確定刪除？")) deleteFaq.mutate({ id: faq.id }); }}>
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* FAQ Dialog */}
+      <Dialog open={faqDialog} onOpenChange={setFaqDialog}>
+        <DialogContent className="bg-card">
+          <DialogHeader><DialogTitle>{editingFaq ? "編輯 FAQ" : "新增 FAQ"}</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>問題 *</Label>
+              <Input value={faqForm.question} onChange={e => setFaqForm(f => ({ ...f, question: e.target.value }))} placeholder="例：課程可以無限次觀看嗎？" />
+            </div>
+            <div>
+              <Label>回答 *</Label>
+              <Textarea value={faqForm.answer} onChange={e => setFaqForm(f => ({ ...f, answer: e.target.value }))} rows={4} placeholder="請輸入回答內容" />
+            </div>
+            <div>
+              <Label>排序</Label>
+              <Input type="number" value={faqForm.sortOrder} onChange={e => setFaqForm(f => ({ ...f, sortOrder: parseInt(e.target.value) || 0 }))} />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setFaqDialog(false)}>取消</Button>
+              <Button onClick={() => {
+                if (!faqForm.question || !faqForm.answer) { toast.error("請填寫問題與回答"); return; }
+                if (editingFaq) {
+                  updateFaq.mutate({ id: editingFaq.id, ...faqForm });
+                } else {
+                  createFaq.mutate({ courseId, ...faqForm });
+                }
+              }}>
+                {editingFaq ? "更新" : "建立"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Chapter Dialog */}
       <Dialog open={chapterDialog} onOpenChange={setChapterDialog}>
         <DialogContent className="bg-card">
@@ -225,14 +337,27 @@ export default function AdminCourseContent() {
               <Label>描述</Label>
               <Textarea value={lessonForm.description} onChange={e => setLessonForm(f => ({ ...f, description: e.target.value }))} rows={3} />
             </div>
-            <div>
-              <Label>影片 URL</Label>
-              <Input value={lessonForm.videoUrl} onChange={e => setLessonForm(f => ({ ...f, videoUrl: e.target.value }))} placeholder="https://..." />
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2"><Video className="h-4 w-4" />教學影片</Label>
+              {lessonForm.videoUrl ? (
+                <div className="flex items-center gap-2 p-2 bg-green-500/10 rounded-lg border border-green-500/20">
+                  <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />
+                  <span className="text-sm text-green-400 truncate flex-1">已上傳影片</span>
+                  <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setLessonForm(f => ({ ...f, videoUrl: "", videoKey: "" }))}>移除</Button>
+                </div>
+              ) : null}
+              <Input value={lessonForm.videoUrl} onChange={e => setLessonForm(f => ({ ...f, videoUrl: e.target.value }))} placeholder="貼上影片 URL 或使用下方上傳" />
+              <div className="border-2 border-dashed border-border rounded-lg p-4 text-center hover:border-primary/50 transition-colors">
+                <Upload className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground mb-2">點擊或拖曳上傳影片（最大 500MB）</p>
+                <Input type="file" accept="video/*" onChange={handleVideoUpload} className="cursor-pointer" />
+                {uploadProgress && <p className="text-xs text-primary mt-2 animate-pulse">{uploadProgress}</p>}
+              </div>
             </div>
-            <div>
-              <Label>或上傳影片</Label>
-              <Input type="file" accept="video/*" onChange={handleVideoUpload} />
-              {uploadMutation.isPending && <p className="text-xs text-muted-foreground mt-1">上傳中...</p>}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2"><FileText className="h-4 w-4" />課程附件（選填）</Label>
+              <p className="text-xs text-muted-foreground">可上傳 PDF、PPT、圖片等輔助教材（最大 50MB）</p>
+              <Input type="file" accept=".pdf,.ppt,.pptx,.doc,.docx,.zip,.png,.jpg,.jpeg" onChange={handleAttachmentUpload} />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>

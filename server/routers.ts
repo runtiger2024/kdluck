@@ -581,6 +581,27 @@ const userRouter = router({
     await db.updateUserRole(input.userId, input.role);
     return { success: true };
   }),
+  // 用戶自行更新個人資料
+  updateProfile: protectedProcedure.input(z.object({
+    name: z.string().optional(),
+    email: z.string().email().optional(),
+    phone: z.string().optional(),
+    birthday: z.string().optional(),
+    gender: z.enum(["male", "female", "other", "prefer_not_to_say"]).nullable().optional(),
+    city: z.string().optional(),
+    address: z.string().optional(),
+    bio: z.string().optional(),
+    occupation: z.string().optional(),
+    company: z.string().optional(),
+    avatarUrl: z.string().optional(),
+  })).mutation(async ({ input, ctx }) => {
+    await db.updateUserProfile(ctx.user.id, input);
+    return { success: true };
+  }),
+  // 取得完整個人資料
+  getProfile: protectedProcedure.query(async ({ ctx }) => {
+    return db.getUserById(ctx.user.id);
+  }),
 });
 
 // ─── Analytics Router ───
@@ -856,6 +877,140 @@ const reviewAdminRouter = router({
   }),
 });
 
+// ─── Wishlist Router ───
+const wishlistRouter = router({
+  list: protectedProcedure.query(async ({ ctx }) => {
+    return db.getUserWishlist(ctx.user.id);
+  }),
+  add: protectedProcedure.input(z.object({ courseId: z.number() })).mutation(async ({ input, ctx }) => {
+    await db.addToWishlist(ctx.user.id, input.courseId);
+    return { success: true };
+  }),
+  remove: protectedProcedure.input(z.object({ courseId: z.number() })).mutation(async ({ input, ctx }) => {
+    await db.removeFromWishlist(ctx.user.id, input.courseId);
+    return { success: true };
+  }),
+  check: protectedProcedure.input(z.object({ courseId: z.number() })).query(async ({ input, ctx }) => {
+    return { inWishlist: await db.isInWishlist(ctx.user.id, input.courseId) };
+  }),
+});
+
+// ─── Announcement Router ───
+const announcementRouter = router({
+  active: publicProcedure.query(async () => {
+    return db.getActiveAnnouncements();
+  }),
+  all: adminProcedure.input(z.object({
+    page: z.number().optional(),
+    limit: z.number().optional(),
+  }).optional()).query(async ({ input }) => {
+    return db.getAllAnnouncements(input?.page, input?.limit);
+  }),
+  create: adminProcedure.input(z.object({
+    title: z.string().min(1),
+    content: z.string().min(1),
+    type: z.enum(["info", "warning", "promotion", "maintenance"]).optional(),
+    isPinned: z.boolean().optional(),
+    startAt: z.string().optional(),
+    endAt: z.string().optional(),
+  })).mutation(async ({ input }) => {
+    const id = await db.createAnnouncement({
+      title: input.title,
+      content: input.content,
+      type: input.type,
+      isPinned: input.isPinned,
+      startAt: input.startAt ? new Date(input.startAt) : undefined,
+      endAt: input.endAt ? new Date(input.endAt) : undefined,
+    });
+    return { success: true, id };
+  }),
+  update: adminProcedure.input(z.object({
+    id: z.number(),
+    title: z.string().optional(),
+    content: z.string().optional(),
+    type: z.enum(["info", "warning", "promotion", "maintenance"]).optional(),
+    isActive: z.boolean().optional(),
+    isPinned: z.boolean().optional(),
+    startAt: z.string().nullable().optional(),
+    endAt: z.string().nullable().optional(),
+  })).mutation(async ({ input }) => {
+    const { id, startAt, endAt, ...rest } = input;
+    await db.updateAnnouncement(id, {
+      ...rest,
+      ...(startAt !== undefined ? { startAt: startAt ? new Date(startAt) : null } : {}),
+      ...(endAt !== undefined ? { endAt: endAt ? new Date(endAt) : null } : {}),
+    } as any);
+    return { success: true };
+  }),
+  delete: adminProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
+    await db.deleteAnnouncement(input.id);
+    return { success: true };
+  }),
+});
+
+// ─── FAQ Router ───
+const faqRouter = router({
+  byCourse: publicProcedure.input(z.object({ courseId: z.number() })).query(async ({ input }) => {
+    return db.getFaqsByCourse(input.courseId);
+  }),
+  create: adminProcedure.input(z.object({
+    courseId: z.number(),
+    question: z.string().min(1),
+    answer: z.string().min(1),
+    sortOrder: z.number().optional(),
+  })).mutation(async ({ input }) => {
+    const id = await db.createFaq(input);
+    return { success: true, id };
+  }),
+  update: adminProcedure.input(z.object({
+    id: z.number(),
+    question: z.string().optional(),
+    answer: z.string().optional(),
+    sortOrder: z.number().optional(),
+  })).mutation(async ({ input }) => {
+    const { id, ...data } = input;
+    await db.updateFaq(id, data);
+    return { success: true };
+  }),
+  delete: adminProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
+    await db.deleteFaq(input.id);
+    return { success: true };
+  }),
+});
+
+// ─── Notes Router ───
+const noteRouter = router({
+  byCourse: protectedProcedure.input(z.object({ courseId: z.number() })).query(async ({ input, ctx }) => {
+    return db.getNotesByUserAndCourse(ctx.user.id, input.courseId);
+  }),
+  byLesson: protectedProcedure.input(z.object({ lessonId: z.number() })).query(async ({ input, ctx }) => {
+    return db.getNotesByUserAndLesson(ctx.user.id, input.lessonId);
+  }),
+  all: protectedProcedure.query(async ({ ctx }) => {
+    return db.getAllNotesByUser(ctx.user.id);
+  }),
+  create: protectedProcedure.input(z.object({
+    courseId: z.number(),
+    lessonId: z.number().optional(),
+    content: z.string().min(1),
+    videoTimestamp: z.number().optional(),
+  })).mutation(async ({ input, ctx }) => {
+    const id = await db.createNote({ ...input, userId: ctx.user.id });
+    return { success: true, id };
+  }),
+  update: protectedProcedure.input(z.object({
+    id: z.number(),
+    content: z.string().min(1),
+  })).mutation(async ({ input, ctx }) => {
+    await db.updateNote(input.id, ctx.user.id, input.content);
+    return { success: true };
+  }),
+  delete: protectedProcedure.input(z.object({ id: z.number() })).mutation(async ({ input, ctx }) => {
+    await db.deleteNote(input.id, ctx.user.id);
+    return { success: true };
+  }),
+});
+
 // ─── Main Router ───
 export const appRouter = router({
   system: systemRouter,
@@ -879,6 +1034,10 @@ export const appRouter = router({
   invoice: invoiceRouter,
   linePush: linePushRouter,
   reviewAdmin: reviewAdminRouter,
+  wishlist: wishlistRouter,
+  announcement: announcementRouter,
+  faq: faqRouter,
+  note: noteRouter,
 });
 
 export type AppRouter = typeof appRouter;

@@ -16,6 +16,10 @@ import {
   notificationTemplates, InsertNotificationTemplate,
   invoices, InsertInvoice,
   linePushHistory, InsertLinePushHistory,
+  wishlist, InsertWishlist,
+  announcements, InsertAnnouncement,
+  courseFaqs, InsertCourseFaq,
+  courseNotes, InsertCourseNote,
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -84,6 +88,22 @@ export async function updateUserRole(userId: number, role: "user" | "admin") {
   const db = await getDb();
   if (!db) return;
   await db.update(users).set({ role }).where(eq(users.id, userId));
+}
+
+export async function updateUserProfile(userId: number, data: {
+  name?: string; email?: string; phone?: string; birthday?: string;
+  gender?: "male" | "female" | "other" | "prefer_not_to_say" | null;
+  city?: string; address?: string; bio?: string;
+  occupation?: string; company?: string; avatarUrl?: string;
+}) {
+  const db = await getDb();
+  if (!db) return;
+  const updateData: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(data)) {
+    if (value !== undefined) updateData[key] = value;
+  }
+  if (Object.keys(updateData).length === 0) return;
+  await db.update(users).set(updateData).where(eq(users.id, userId));
 }
 
 // ─── Categories ───
@@ -699,4 +719,161 @@ export async function getApiConfig(): Promise<ApiConfig> {
     lineChannelSecret: config.line_channel_secret || process.env.LINE_CHANNEL_SECRET || "",
     lineMessagingToken: config.line_messaging_token || process.env.LINE_MESSAGING_TOKEN || "",
   };
+}
+
+// ─── Wishlist (願望清單) ───
+export async function getUserWishlist(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({
+    id: wishlist.id,
+    courseId: wishlist.courseId,
+    createdAt: wishlist.createdAt,
+    courseTitle: courses.title,
+    courseSlug: courses.slug,
+    coverImageUrl: courses.coverImageUrl,
+    price: courses.price,
+    originalPrice: courses.originalPrice,
+    level: courses.level,
+  }).from(wishlist)
+    .innerJoin(courses, eq(wishlist.courseId, courses.id))
+    .where(eq(wishlist.userId, userId))
+    .orderBy(desc(wishlist.createdAt));
+}
+
+export async function addToWishlist(userId: number, courseId: number) {
+  const db = await getDb();
+  if (!db) return;
+  const existing = await db.select().from(wishlist)
+    .where(and(eq(wishlist.userId, userId), eq(wishlist.courseId, courseId))).limit(1);
+  if (existing.length > 0) return;
+  await db.insert(wishlist).values({ userId, courseId });
+}
+
+export async function removeFromWishlist(userId: number, courseId: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(wishlist).where(and(eq(wishlist.userId, userId), eq(wishlist.courseId, courseId)));
+}
+
+export async function isInWishlist(userId: number, courseId: number) {
+  const db = await getDb();
+  if (!db) return false;
+  const result = await db.select().from(wishlist)
+    .where(and(eq(wishlist.userId, userId), eq(wishlist.courseId, courseId))).limit(1);
+  return result.length > 0;
+}
+
+// ─── Announcements (公告) ───
+export async function getActiveAnnouncements() {
+  const db = await getDb();
+  if (!db) return [];
+  const now = new Date();
+  return db.select().from(announcements)
+    .where(and(
+      eq(announcements.isActive, true),
+      sql`(startAt IS NULL OR startAt <= ${now})`,
+      sql`(endAt IS NULL OR endAt >= ${now})`,
+    ))
+    .orderBy(desc(announcements.isPinned), desc(announcements.createdAt));
+}
+
+export async function getAllAnnouncements(page = 1, limit = 20) {
+  const db = await getDb();
+  if (!db) return { items: [], total: 0 };
+  const offset = (page - 1) * limit;
+  const [items, countResult] = await Promise.all([
+    db.select().from(announcements).orderBy(desc(announcements.createdAt)).limit(limit).offset(offset),
+    db.select({ count: sql<number>`count(*)` }).from(announcements),
+  ]);
+  return { items, total: countResult[0]?.count ?? 0 };
+}
+
+export async function createAnnouncement(data: InsertAnnouncement) {
+  const db = await getDb();
+  if (!db) return;
+  const result = await db.insert(announcements).values(data);
+  return result[0].insertId;
+}
+
+export async function updateAnnouncement(id: number, data: Partial<InsertAnnouncement>) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(announcements).set(data).where(eq(announcements.id, id));
+}
+
+export async function deleteAnnouncement(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(announcements).where(eq(announcements.id, id));
+}
+
+// ─── Course FAQs ───
+export async function getFaqsByCourse(courseId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(courseFaqs).where(eq(courseFaqs.courseId, courseId)).orderBy(asc(courseFaqs.sortOrder));
+}
+
+export async function createFaq(data: InsertCourseFaq) {
+  const db = await getDb();
+  if (!db) return;
+  const result = await db.insert(courseFaqs).values(data);
+  return result[0].insertId;
+}
+
+export async function updateFaq(id: number, data: Partial<InsertCourseFaq>) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(courseFaqs).set(data).where(eq(courseFaqs.id, id));
+}
+
+export async function deleteFaq(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(courseFaqs).where(eq(courseFaqs.id, id));
+}
+
+// ─── Course Notes ───
+export async function getNotesByUserAndCourse(userId: number, courseId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(courseNotes)
+    .where(and(eq(courseNotes.userId, userId), eq(courseNotes.courseId, courseId)))
+    .orderBy(desc(courseNotes.createdAt));
+}
+
+export async function getNotesByUserAndLesson(userId: number, lessonId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(courseNotes)
+    .where(and(eq(courseNotes.userId, userId), eq(courseNotes.lessonId, lessonId)))
+    .orderBy(desc(courseNotes.createdAt));
+}
+
+export async function createNote(data: InsertCourseNote) {
+  const db = await getDb();
+  if (!db) return;
+  const result = await db.insert(courseNotes).values(data);
+  return result[0].insertId;
+}
+
+export async function updateNote(id: number, userId: number, content: string) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(courseNotes).set({ content }).where(and(eq(courseNotes.id, id), eq(courseNotes.userId, userId)));
+}
+
+export async function deleteNote(id: number, userId: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(courseNotes).where(and(eq(courseNotes.id, id), eq(courseNotes.userId, userId)));
+}
+
+export async function getAllNotesByUser(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(courseNotes)
+    .where(eq(courseNotes.userId, userId))
+    .orderBy(desc(courseNotes.createdAt));
 }

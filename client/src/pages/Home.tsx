@@ -4,8 +4,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
 import { getLoginUrl } from "@/const";
-import { BookOpen, Play, Star, Users, ChevronRight, Sparkles } from "lucide-react";
+import { BookOpen, Play, Star, Users, ChevronRight, Sparkles, Megaphone, AlertTriangle, Tag, Wrench, X } from "lucide-react";
 import { useLocation } from "wouter";
+import { useState } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
@@ -15,12 +16,40 @@ export default function Home() {
   const { data: coursesData } = trpc.course.published.useQuery({ limit: 6 });
   const { data: categoriesList } = trpc.category.list.useQuery();
   const { data: siteConfig } = trpc.siteConfig.get.useQuery();
+  const { data: activeAnnouncements } = trpc.announcement.active.useQuery();
+  const [dismissedAnnouncements, setDismissedAnnouncements] = useState<number[]>([]);
 
   const levelLabel: Record<string, string> = { beginner: "入門", intermediate: "中級", advanced: "高級" };
 
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
+
+      {/* Announcements Banner */}
+      {activeAnnouncements && activeAnnouncements.length > 0 && (
+        <div className="bg-card border-b border-border">
+          <div className="container py-2 space-y-1">
+            {activeAnnouncements.filter(a => !dismissedAnnouncements.includes(a.id)).slice(0, 3).map(a => {
+              const typeIcon: Record<string, React.ReactNode> = {
+                info: <Megaphone className="h-4 w-4 text-blue-400" />,
+                warning: <AlertTriangle className="h-4 w-4 text-yellow-400" />,
+                promotion: <Tag className="h-4 w-4 text-green-400" />,
+                maintenance: <Wrench className="h-4 w-4 text-orange-400" />,
+              };
+              return (
+                <div key={a.id} className="flex items-center gap-3 text-sm py-1">
+                  {typeIcon[a.type] ?? typeIcon.info}
+                  <span className="font-medium">{a.title}</span>
+                  <span className="text-muted-foreground line-clamp-1 flex-1">{a.content}</span>
+                  <button onClick={() => setDismissedAnnouncements(prev => [...prev, a.id])} className="text-muted-foreground hover:text-foreground shrink-0">
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Hero Section */}
       <section className="relative overflow-hidden bg-cinematic-hero min-h-[80vh] flex items-center">

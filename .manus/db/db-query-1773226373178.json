@@ -1,0 +1,9 @@
+{
+  "query": "INSERT INTO announcements (title, content, type, isActive, isPinned) VALUES\n('歡迎來到 KDLuck 知識付費平台', '我們致力於提供最優質的線上課程，幫助您提升專業技能。', 'info', true, true),\n('限時優惠活動', '即日起至月底，全站課程享有 85 折優惠，使用優惠碼 SPRING2026 即可享受折扣！', 'promotion', true, false),\n('系統維護通知', '本平台將於每週日凌晨 2:00-4:00 進行例行維護，期間可能暫時無法使用。', 'maintenance', true, false);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 28JPo3Vw26mPY6V.root --database XBhqXuJ2WiY8ShtDj5vvMz --execute INSERT INTO announcements (title, content, type, isActive, isPinned) VALUES\n('歡迎來到 KDLuck 知識付費平台', '我們致力於提供最優質的線上課程，幫助您提升專業技能。', 'info', true, true),\n('限時優惠活動', '即日起至月底，全站課程享有 85 折優惠，使用優惠碼 SPRING2026 即可享受折扣！', 'promotion', true, false),\n('系統維護通知', '本平台將於每週日凌晨 2:00-4:00 進行例行維護，期間可能暫時無法使用。', 'maintenance', true, false);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1587
+}

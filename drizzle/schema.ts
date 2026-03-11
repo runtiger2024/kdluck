@@ -10,6 +10,14 @@ export const users = mysqlTable("users", {
   loginMethod: varchar("loginMethod", { length: 64 }),
   role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
   lineUserId: varchar("lineUserId", { length: 128 }),
+  phone: varchar("phone", { length: 32 }),
+  birthday: varchar("birthday", { length: 10 }),
+  gender: mysqlEnum("gender", ["male", "female", "other", "prefer_not_to_say"]),
+  city: varchar("city", { length: 64 }),
+  address: text("address"),
+  bio: text("bio"),
+  occupation: varchar("occupation", { length: 128 }),
+  company: varchar("company", { length: 128 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
@@ -261,3 +269,60 @@ export const linePushHistory = mysqlTable("line_push_history", {
 
 export type LinePushHistory = typeof linePushHistory.$inferSelect;
 export type InsertLinePushHistory = typeof linePushHistory.$inferInsert;
+
+// ─── Wishlist (願望清單) ───
+export const wishlist = mysqlTable("wishlist", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  courseId: int("courseId").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type Wishlist = typeof wishlist.$inferSelect;
+export type InsertWishlist = typeof wishlist.$inferInsert;
+
+// ─── Announcements (公告) ───
+export const announcements = mysqlTable("announcements", {
+  id: int("id").autoincrement().primaryKey(),
+  title: varchar("title", { length: 256 }).notNull(),
+  content: text("content").notNull(),
+  type: mysqlEnum("type", ["info", "warning", "promotion", "maintenance"]).default("info").notNull(),
+  isActive: boolean("isActive").default(true).notNull(),
+  isPinned: boolean("isPinned").default(false).notNull(),
+  startAt: timestamp("startAt"),
+  endAt: timestamp("endAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Announcement = typeof announcements.$inferSelect;
+export type InsertAnnouncement = typeof announcements.$inferInsert;
+
+// ─── Course FAQs (課程常見問題) ───
+export const courseFaqs = mysqlTable("course_faqs", {
+  id: int("id").autoincrement().primaryKey(),
+  courseId: int("courseId").notNull(),
+  question: text("question").notNull(),
+  answer: text("answer").notNull(),
+  sortOrder: int("sortOrder").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type CourseFaq = typeof courseFaqs.$inferSelect;
+export type InsertCourseFaq = typeof courseFaqs.$inferInsert;
+
+// ─── Course Notes (學員筆記) ───
+export const courseNotes = mysqlTable("course_notes", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  courseId: int("courseId").notNull(),
+  lessonId: int("lessonId"),
+  content: text("content").notNull(),
+  videoTimestamp: int("videoTimestamp"), // 影片時間戳（秒）
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type CourseNote = typeof courseNotes.$inferSelect;
+export type InsertCourseNote = typeof courseNotes.$inferInsert;

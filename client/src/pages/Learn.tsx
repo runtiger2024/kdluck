@@ -4,10 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ArrowLeft, Play, CheckCircle, Lock, ChevronDown, ChevronUp } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { ArrowLeft, Play, CheckCircle, Lock, ChevronDown, ChevronUp, StickyNote, Plus, Trash2, Clock, X } from "lucide-react";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useParams, useLocation } from "wouter";
 import { getLoginUrl } from "@/const";
+import { toast } from "sonner";
 
 export default function Learn() {
   const params = useParams<{ slug: string }>();
@@ -16,6 +18,9 @@ export default function Learn() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [currentLessonId, setCurrentLessonId] = useState<number | null>(null);
   const [expandedChapters, setExpandedChapters] = useState<Set<number>>(new Set());
+  const [showNotes, setShowNotes] = useState(false);
+  const [noteContent, setNoteContent] = useState("");
+  const [editingNoteId, setEditingNoteId] = useState<number | null>(null);
 
   const { data: course } = trpc.course.getBySlug.useQuery({ slug: params.slug ?? "" });
   const { data: enrollment } = trpc.enrollment.check.useQuery({ courseId: course?.id ?? 0 }, { enabled: !!course && !!user });
@@ -24,15 +29,18 @@ export default function Learn() {
   const { data: progressData } = trpc.progress.getByCourse.useQuery({ courseId: course?.id ?? 0 }, { enabled: !!course && !!user });
   const { data: signedUrl } = trpc.lesson.getSignedUrl.useQuery({ lessonId: currentLessonId ?? 0 }, { enabled: !!currentLessonId && !!user });
   const { data: currentProgress } = trpc.progress.getByLesson.useQuery({ lessonId: currentLessonId ?? 0 }, { enabled: !!currentLessonId && !!user });
+  const { data: lessonNotes, refetch: refetchNotes } = trpc.note.byLesson.useQuery({ lessonId: currentLessonId ?? 0 }, { enabled: !!currentLessonId && !!user && showNotes });
 
   const updateProgress = trpc.progress.update.useMutation();
+  const createNote = trpc.note.create.useMutation({ onSuccess: () => { refetchNotes(); setNoteContent(""); toast.success("筆記已儲存"); } });
+  const updateNote = trpc.note.update.useMutation({ onSuccess: () => { refetchNotes(); setEditingNoteId(null); setNoteContent(""); toast.success("筆記已更新"); } });
+  const deleteNote = trpc.note.delete.useMutation({ onSuccess: () => { refetchNotes(); toast.success("筆記已刪除"); } });
 
   // Auto-select first lesson
   useEffect(() => {
     if (lessons && lessons.length > 0 && !currentLessonId) {
       const sorted = [...lessons].sort((a, b) => a.sortOrder - b.sortOrder);
       setCurrentLessonId(sorted[0].id);
-      // Expand all chapters by default
       if (chapters) {
         setExpandedChapters(new Set(chapters.map(c => c.id)));
       }
@@ -61,9 +69,37 @@ export default function Learn() {
   }, [currentLessonId, course]);
 
   useEffect(() => {
-    const interval = setInterval(saveProgress, 15000); // Save every 15s
+    const interval = setInterval(saveProgress, 15000);
     return () => clearInterval(interval);
   }, [saveProgress]);
+
+  const formatTimestamp = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s.toString().padStart(2, "0")}`;
+  };
+
+  const handleAddNote = () => {
+    if (!noteContent.trim() || !currentLessonId || !course) return;
+    const timestamp = videoRef.current ? Math.floor(videoRef.current.currentTime) : undefined;
+    if (editingNoteId) {
+      updateNote.mutate({ id: editingNoteId, content: noteContent });
+    } else {
+      createNote.mutate({ courseId: course.id, lessonId: currentLessonId, content: noteContent, videoTimestamp: timestamp });
+    }
+  };
+
+  const handleEditNote = (note: { id: number; content: string }) => {
+    setEditingNoteId(note.id);
+    setNoteContent(note.content);
+  };
+
+  const handleJumpToTimestamp = (seconds: number) => {
+    if (videoRef.current) {
+      videoRef.current.currentTime = seconds;
+      videoRef.current.play();
+    }
+  };
 
   if (!user) {
     return (
@@ -111,6 +147,15 @@ export default function Learn() {
         </Button>
         <span className="font-medium truncate">{course?.title}</span>
         <div className="ml-auto flex items-center gap-3">
+          <Button
+            variant={showNotes ? "default" : "outline"}
+            size="sm"
+            onClick={() => setShowNotes(!showNotes)}
+            className="gap-1"
+          >
+            <StickyNote className="h-4 w-4" />
+            <span className="hidden sm:inline">筆記</span>
+          </Button>
           <span className="text-xs text-muted-foreground">{completedLessons}/{totalLessons} 完成</span>
           <Progress value={progressPercent} className="w-32 h-2" />
           <span className="text-xs font-medium text-primary">{progressPercent}%</span>
@@ -147,6 +192,78 @@ export default function Learn() {
             </div>
           )}
         </div>
+
+        {/* Notes Panel */}
+        {showNotes && (
+          <aside className="w-80 border-l border-border bg-card/30 shrink-0 flex flex-col">
+            <div className="p-4 border-b border-border flex items-center justify-between">
+              <h3 className="font-semibold flex items-center gap-2">
+                <StickyNote className="h-4 w-4" />課堂筆記
+              </h3>
+              <Button variant="ghost" size="sm" onClick={() => setShowNotes(false)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            {/* Note input */}
+            <div className="p-3 border-b border-border space-y-2">
+              <Textarea
+                placeholder="在此記錄筆記... 會自動標記當前影片時間"
+                value={noteContent}
+                onChange={e => setNoteContent(e.target.value)}
+                className="min-h-[80px] text-sm resize-none"
+              />
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  onClick={handleAddNote}
+                  disabled={!noteContent.trim() || createNote.isPending || updateNote.isPending}
+                  className="flex-1"
+                >
+                  <Plus className="h-3 w-3 mr-1" />
+                  {editingNoteId ? "更新筆記" : "新增筆記"}
+                </Button>
+                {editingNoteId && (
+                  <Button size="sm" variant="outline" onClick={() => { setEditingNoteId(null); setNoteContent(""); }}>
+                    取消
+                  </Button>
+                )}
+              </div>
+            </div>
+            {/* Notes list */}
+            <ScrollArea className="flex-1">
+              <div className="p-3 space-y-2">
+                {lessonNotes?.map(note => (
+                  <div key={note.id} className="p-3 rounded-lg bg-secondary/20 border border-border text-sm space-y-2">
+                    {note.videoTimestamp != null && (
+                      <button
+                        onClick={() => handleJumpToTimestamp(note.videoTimestamp!)}
+                        className="flex items-center gap-1 text-xs text-primary hover:underline"
+                      >
+                        <Clock className="h-3 w-3" />
+                        {formatTimestamp(note.videoTimestamp)}
+                      </button>
+                    )}
+                    <p className="whitespace-pre-wrap leading-relaxed">{note.content}</p>
+                    <div className="flex gap-2 pt-1">
+                      <button onClick={() => handleEditNote(note)} className="text-xs text-muted-foreground hover:text-foreground">
+                        編輯
+                      </button>
+                      <button
+                        onClick={() => { if (confirm("確定刪除此筆記？")) deleteNote.mutate({ id: note.id }); }}
+                        className="text-xs text-destructive hover:text-destructive/80"
+                      >
+                        刪除
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                {(!lessonNotes || lessonNotes.length === 0) && (
+                  <p className="text-center py-8 text-muted-foreground text-sm">尚無筆記，開始記錄吧！</p>
+                )}
+              </div>
+            </ScrollArea>
+          </aside>
+        )}
 
         {/* Sidebar - lesson list */}
         <aside className="w-80 border-l border-border bg-card/30 shrink-0 hidden lg:flex flex-col">

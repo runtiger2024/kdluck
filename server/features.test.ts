@@ -141,7 +141,33 @@ vi.mock("./db", () => {
     getAllReviews: vi.fn().mockResolvedValue({ items: mockReviews, total: 0 }),
     deleteReview: vi.fn(),
     getUsersWithLineId: vi.fn().mockResolvedValue([]),
-    getUserById: vi.fn().mockImplementation((id: number) => Promise.resolve(id === 1 ? { id: 1, name: "Test", lineUserId: "U123" } : null)),
+    getUserById: vi.fn().mockImplementation((id: number) => Promise.resolve(id === 1 ? { id: 1, name: "Test", email: "test@example.com", phone: null, birthday: null, gender: null, city: null, address: null, bio: null, occupation: null, company: null, avatarUrl: null, lineUserId: "U123" } : null)),
+    updateUserProfile: vi.fn(),
+    getUserWishlist: vi.fn().mockResolvedValue([{ id: 1, courseId: 1, courseTitle: "React 入門", courseSlug: "react-intro", coursePrice: "1990.00", coverImageUrl: null }]),
+    addToWishlist: vi.fn(),
+    removeFromWishlist: vi.fn(),
+    isInWishlist: vi.fn().mockResolvedValue(false),
+    getActiveAnnouncements: vi.fn().mockResolvedValue([{ id: 1, title: "測試公告", content: "測試內容", type: "info", isActive: true, isPinned: false, startAt: null, endAt: null, createdAt: new Date() }]),
+    getAllAnnouncements: vi.fn().mockResolvedValue({ items: [{ id: 1, title: "測試公告", content: "測試內容", type: "info", isActive: true, isPinned: false }], total: 1 }),
+    createAnnouncement: vi.fn().mockResolvedValue(2),
+    updateAnnouncement: vi.fn(),
+    deleteAnnouncement: vi.fn(),
+    getFaqsByCourse: vi.fn().mockResolvedValue([
+      { id: 1, courseId: 1, question: "課程可以無限次觀看嗎？", answer: "是的，購買後可無限次觀看", sortOrder: 0, createdAt: new Date() },
+    ]),
+    createFaq: vi.fn().mockResolvedValue(2),
+    updateFaq: vi.fn(),
+    deleteFaq: vi.fn(),
+    getNotesByUserAndCourse: vi.fn().mockResolvedValue([
+      { id: 1, userId: 1, courseId: 1, lessonId: 1, content: "測試筆記", videoTimestamp: 120, createdAt: new Date(), updatedAt: new Date() },
+    ]),
+    getNotesByUserAndLesson: vi.fn().mockResolvedValue([]),
+    getAllNotesByUser: vi.fn().mockResolvedValue([
+      { id: 1, userId: 1, courseId: 1, lessonId: 1, content: "測試筆記", videoTimestamp: 120, createdAt: new Date(), updatedAt: new Date() },
+    ]),
+    createNote: vi.fn().mockResolvedValue(2),
+    updateNote: vi.fn(),
+    deleteNote: vi.fn(),
     getApiConfig: vi.fn().mockResolvedValue({
       ecpayMerchantId: "3002607",
       ecpayHashKey: "pwFHCqoQZGmho4w6",
@@ -1012,5 +1038,244 @@ describe("Public API - Bank Info", () => {
     expect(result).toHaveProperty("bankCode");
     expect(result).toHaveProperty("bankAccount");
     expect(result).toHaveProperty("bankHolder");
+  });
+});
+
+// ─── Wishlist Tests ───
+describe("Protected API - Wishlist", () => {
+  it("lists user wishlist", async () => {
+    const caller = appRouter.createCaller(createUserContext());
+    const result = await caller.wishlist.list();
+    expect(Array.isArray(result)).toBe(true);
+    expect(result[0]).toHaveProperty("courseTitle");
+  });
+
+  it("adds course to wishlist", async () => {
+    const caller = appRouter.createCaller(createUserContext());
+    const result = await caller.wishlist.add({ courseId: 1 });
+    expect(result.success).toBe(true);
+  });
+
+  it("removes course from wishlist", async () => {
+    const caller = appRouter.createCaller(createUserContext());
+    const result = await caller.wishlist.remove({ courseId: 1 });
+    expect(result.success).toBe(true);
+  });
+
+  it("checks wishlist status", async () => {
+    const caller = appRouter.createCaller(createUserContext());
+    const result = await caller.wishlist.check({ courseId: 1 });
+    expect(result).toHaveProperty("inWishlist");
+    expect(typeof result.inWishlist).toBe("boolean");
+  });
+
+  it("denies anonymous access to wishlist", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    await expect(caller.wishlist.list()).rejects.toThrow();
+  });
+});
+
+// ─── Announcement Tests ───
+describe("Public API - Announcements", () => {
+  it("returns active announcements", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    const result = await caller.announcement.active();
+    expect(Array.isArray(result)).toBe(true);
+    expect(result[0]).toHaveProperty("title");
+    expect(result[0]).toHaveProperty("content");
+  });
+});
+
+describe("Admin API - Announcement Management", () => {
+  it("lists all announcements", async () => {
+    const caller = appRouter.createCaller(createAdminContext());
+    const result = await caller.announcement.all({});
+    expect(result).toHaveProperty("items");
+    expect(result).toHaveProperty("total");
+  });
+
+  it("creates an announcement", async () => {
+    const caller = appRouter.createCaller(createAdminContext());
+    const result = await caller.announcement.create({
+      title: "新公告",
+      content: "公告內容",
+      type: "info",
+    });
+    expect(result.success).toBe(true);
+    expect(result.id).toBe(2);
+  });
+
+  it("updates an announcement", async () => {
+    const caller = appRouter.createCaller(createAdminContext());
+    const result = await caller.announcement.update({
+      id: 1,
+      title: "更新公告",
+      isActive: false,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("deletes an announcement", async () => {
+    const caller = appRouter.createCaller(createAdminContext());
+    const result = await caller.announcement.delete({ id: 1 });
+    expect(result.success).toBe(true);
+  });
+
+  it("denies regular user access to create announcement", async () => {
+    const caller = appRouter.createCaller(createUserContext());
+    await expect(
+      caller.announcement.create({ title: "Test", content: "Test" })
+    ).rejects.toThrow();
+  });
+});
+
+// ─── User Profile Tests ───
+describe("Protected API - User Profile", () => {
+  it("gets user profile", async () => {
+    const caller = appRouter.createCaller(createUserContext());
+    const result = await caller.user.getProfile();
+    expect(result).toHaveProperty("name");
+    expect(result).toHaveProperty("email");
+  });
+
+  it("updates user profile", async () => {
+    const caller = appRouter.createCaller(createUserContext());
+    const result = await caller.user.updateProfile({
+      name: "新名稱",
+      phone: "0912345678",
+      birthday: "1990-01-01",
+      gender: "male",
+      city: "台北市",
+      address: "信義區信義路一段1號",
+      bio: "我是一名軟體工程師",
+      occupation: "軟體工程師",
+      company: "KDLuck 科技",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("updates partial profile", async () => {
+    const caller = appRouter.createCaller(createUserContext());
+    const result = await caller.user.updateProfile({
+      phone: "0987654321",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("denies anonymous access to profile", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    await expect(caller.user.getProfile()).rejects.toThrow();
+  });
+});
+
+// ─── FAQ Tests ───
+describe("Public API - FAQ", () => {
+  it("lists FAQs by course", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    const result = await caller.faq.byCourse({ courseId: 1 });
+    expect(Array.isArray(result)).toBe(true);
+    expect(result[0]).toHaveProperty("question");
+    expect(result[0]).toHaveProperty("answer");
+  });
+});
+
+describe("Admin API - FAQ Management", () => {
+  it("creates a FAQ", async () => {
+    const caller = appRouter.createCaller(createAdminContext());
+    const result = await caller.faq.create({
+      courseId: 1,
+      question: "如何退款？",
+      answer: "請聯繫客服",
+      sortOrder: 1,
+    });
+    expect(result.success).toBe(true);
+    expect(result.id).toBe(2);
+  });
+
+  it("updates a FAQ", async () => {
+    const caller = appRouter.createCaller(createAdminContext());
+    const result = await caller.faq.update({
+      id: 1,
+      question: "更新的問題",
+      answer: "更新的回答",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("deletes a FAQ", async () => {
+    const caller = appRouter.createCaller(createAdminContext());
+    const result = await caller.faq.delete({ id: 1 });
+    expect(result.success).toBe(true);
+  });
+
+  it("denies regular user access to create FAQ", async () => {
+    const caller = appRouter.createCaller(createUserContext());
+    await expect(
+      caller.faq.create({ courseId: 1, question: "Test", answer: "Test" })
+    ).rejects.toThrow();
+  });
+});
+
+// ─── Notes Tests ───
+describe("Protected API - Notes", () => {
+  it("lists all notes for user", async () => {
+    const caller = appRouter.createCaller(createUserContext());
+    const result = await caller.note.all();
+    expect(Array.isArray(result)).toBe(true);
+    expect(result[0]).toHaveProperty("content");
+    expect(result[0]).toHaveProperty("videoTimestamp");
+  });
+
+  it("lists notes by course", async () => {
+    const caller = appRouter.createCaller(createUserContext());
+    const result = await caller.note.byCourse({ courseId: 1 });
+    expect(Array.isArray(result)).toBe(true);
+  });
+
+  it("lists notes by lesson", async () => {
+    const caller = appRouter.createCaller(createUserContext());
+    const result = await caller.note.byLesson({ lessonId: 1 });
+    expect(Array.isArray(result)).toBe(true);
+  });
+
+  it("creates a note", async () => {
+    const caller = appRouter.createCaller(createUserContext());
+    const result = await caller.note.create({
+      courseId: 1,
+      lessonId: 1,
+      content: "這是一則新筆記",
+      videoTimestamp: 300,
+    });
+    expect(result.success).toBe(true);
+    expect(result.id).toBe(2);
+  });
+
+  it("creates a note without timestamp", async () => {
+    const caller = appRouter.createCaller(createUserContext());
+    const result = await caller.note.create({
+      courseId: 1,
+      content: "沒有時間戳的筆記",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("updates a note", async () => {
+    const caller = appRouter.createCaller(createUserContext());
+    const result = await caller.note.update({
+      id: 1,
+      content: "更新的筆記內容",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("deletes a note", async () => {
+    const caller = appRouter.createCaller(createUserContext());
+    const result = await caller.note.delete({ id: 1 });
+    expect(result.success).toBe(true);
+  });
+
+  it("denies anonymous access to notes", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    await expect(caller.note.all()).rejects.toThrow();
   });
 });

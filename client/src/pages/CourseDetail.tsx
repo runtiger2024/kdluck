@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { BookOpen, Clock, Play, Star, Users, Lock, CheckCircle, ChevronDown, ChevronUp, ShoppingCart, Loader2, CreditCard, Building2 } from "lucide-react";
+import { BookOpen, Clock, Play, Star, Users, Lock, CheckCircle, ChevronDown, ChevronUp, ShoppingCart, Loader2, CreditCard, Building2, Heart } from "lucide-react";
 import { useState } from "react";
 import { useParams, useLocation } from "wouter";
 import { toast } from "sonner";
@@ -33,9 +33,18 @@ export default function CourseDetail() {
   const { data: chapters } = trpc.chapter.listByCourse.useQuery({ courseId: course?.id ?? 0 }, { enabled: !!course });
   const { data: lessons } = trpc.lesson.listByCourse.useQuery({ courseId: course?.id ?? 0 }, { enabled: !!course });
   const { data: reviews } = trpc.review.listByCourse.useQuery({ courseId: course?.id ?? 0 }, { enabled: !!course });
+  const { data: faqs } = trpc.faq.byCourse.useQuery({ courseId: course?.id ?? 0 }, { enabled: !!course });
+  const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
   const { data: enrollment } = trpc.enrollment.check.useQuery({ courseId: course?.id ?? 0 }, { enabled: !!course && !!user });
   const { data: instructor } = trpc.instructor.getById.useQuery({ id: course?.instructorId ?? 0 }, { enabled: !!course?.instructorId });
   const { data: couponResult } = trpc.coupon.validate.useQuery({ code: couponCode, courseId: course?.id }, { enabled: couponCode.length > 3 });
+  const { data: wishlistStatus } = trpc.wishlist.check.useQuery({ courseId: course?.id ?? 0 }, { enabled: !!course && !!user });
+  const addWishlist = trpc.wishlist.add.useMutation({
+    onSuccess: () => { utils.wishlist.check.invalidate({ courseId: course?.id ?? 0 }); toast.success("已加入願望清單"); },
+  });
+  const removeWishlist = trpc.wishlist.remove.useMutation({
+    onSuccess: () => { utils.wishlist.check.invalidate({ courseId: course?.id ?? 0 }); toast.success("已從願望清單移除"); },
+  });
 
   const utils = trpc.useUtils();
   const createOrder = trpc.order.create.useMutation();
@@ -231,9 +240,25 @@ export default function CourseDetail() {
                       </Button>
                     </div>
                   ) : (
-                    <Button className="w-full glow-orange" size="lg" onClick={handlePurchase} disabled={createOrder.isPending}>
-                      <ShoppingCart className="h-5 w-5 mr-2" />{isFree ? "免費報名" : "立即購買"}
-                    </Button>
+                    <div className="space-y-2">
+                      <Button className="w-full glow-orange" size="lg" onClick={handlePurchase} disabled={createOrder.isPending}>
+                        <ShoppingCart className="h-5 w-5 mr-2" />{isFree ? "免費報名" : "立即購買"}
+                      </Button>
+                      {user && (
+                        <Button
+                          variant="outline"
+                          className="w-full"
+                          onClick={() => wishlistStatus?.inWishlist
+                            ? removeWishlist.mutate({ courseId: course.id })
+                            : addWishlist.mutate({ courseId: course.id })
+                          }
+                          disabled={addWishlist.isPending || removeWishlist.isPending}
+                        >
+                          <Heart className={`h-4 w-4 mr-2 ${wishlistStatus?.inWishlist ? "fill-red-500 text-red-500" : ""}`} />
+                          {wishlistStatus?.inWishlist ? "已在願望清單" : "加入願望清單"}
+                        </Button>
+                      )}
+                    </div>
                   )}
                 </CardContent>
               </Card>
@@ -365,6 +390,31 @@ export default function CourseDetail() {
                   )}
                 </CardContent>
               </Card>
+
+              {/* FAQ Section */}
+              {faqs && faqs.length > 0 && (
+                <Card className="bg-card border-border">
+                  <CardHeader><CardTitle>常見問題</CardTitle></CardHeader>
+                  <CardContent className="space-y-2">
+                    {faqs.map(faq => (
+                      <div key={faq.id} className="border border-border rounded-lg overflow-hidden">
+                        <button
+                          onClick={() => setExpandedFaq(expandedFaq === faq.id ? null : faq.id)}
+                          className="w-full flex items-center justify-between p-4 text-left hover:bg-secondary/20 transition-colors"
+                        >
+                          <span className="font-medium text-sm">{faq.question}</span>
+                          {expandedFaq === faq.id ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+                        </button>
+                        {expandedFaq === faq.id && (
+                          <div className="px-4 pb-4 text-sm text-muted-foreground leading-relaxed border-t border-border pt-3">
+                            {faq.answer}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              )}
             </div>
 
             {/* Sidebar - preview video */}

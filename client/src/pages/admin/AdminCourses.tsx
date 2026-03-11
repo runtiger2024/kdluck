@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Pencil, Trash2, Eye } from "lucide-react";
+import { Plus, Pencil, Trash2, Eye, Upload, Image, CheckCircle2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
@@ -33,6 +33,33 @@ export default function AdminCourses() {
   const deleteMutation = trpc.course.delete.useMutation({
     onSuccess: () => { utils.course.all.invalidate(); toast.success("課程已刪除"); },
   });
+
+  const uploadMutation = trpc.upload.uploadFile.useMutation();
+  const [coverUploading, setCoverUploading] = useState(false);
+
+  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) { toast.error("圖片不得超過 10MB"); return; }
+    setCoverUploading(true);
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const base64 = (reader.result as string).split(",")[1];
+      try {
+        const result = await uploadMutation.mutateAsync({
+          key: `covers/${Date.now()}-${file.name}`,
+          base64Data: base64,
+          contentType: file.type,
+        });
+        setForm(f => ({ ...f, coverImageUrl: result.url }));
+        toast.success("封面上傳成功");
+      } catch {
+        toast.error("封面上傳失敗");
+      }
+      setCoverUploading(false);
+    };
+    reader.readAsDataURL(file);
+  };
 
   const [form, setForm] = useState({
     title: "", slug: "", subtitle: "", description: "", price: "0", originalPrice: "",
@@ -219,11 +246,26 @@ export default function AdminCourses() {
               <Label>課程描述</Label>
               <Textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={4} />
             </div>
-            <div>
-              <Label>封面圖片 URL</Label>
-              <Input value={form.coverImageUrl} onChange={e => setForm(f => ({ ...f, coverImageUrl: e.target.value }))} placeholder="https://..." />
+            <div className="col-span-2">
+              <Label className="flex items-center gap-2 mb-2"><Image className="h-4 w-4" />課程封面圖片</Label>
+              {form.coverImageUrl ? (
+                <div className="mb-2 relative group">
+                  <img src={form.coverImageUrl} alt="封面預覽" className="w-full max-h-48 object-cover rounded-lg border border-border" />
+                  <Button variant="destructive" size="sm" className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-7 text-xs" onClick={() => setForm(f => ({ ...f, coverImageUrl: "" }))}>移除</Button>
+                </div>
+              ) : null}
+              <div className="flex gap-2">
+                <Input value={form.coverImageUrl} onChange={e => setForm(f => ({ ...f, coverImageUrl: e.target.value }))} placeholder="貼上圖片 URL 或使用右側上傳" className="flex-1" />
+                <div className="relative">
+                  <Button variant="outline" disabled={coverUploading} className="relative">
+                    <Upload className="h-4 w-4 mr-1" />{coverUploading ? "上傳中..." : "上傳圖片"}
+                  </Button>
+                  <input type="file" accept="image/*" onChange={handleCoverUpload} className="absolute inset-0 opacity-0 cursor-pointer" />
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">建議尺寸 1280x720，最大 10MB，支援 JPG/PNG/WebP</p>
             </div>
-            <div>
+            <div className="col-span-2">
               <Label>預覽影片 URL</Label>
               <Input value={form.previewVideoUrl} onChange={e => setForm(f => ({ ...f, previewVideoUrl: e.target.value }))} placeholder="https://..." />
             </div>

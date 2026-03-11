@@ -4,6 +4,7 @@ import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import LineFloatingButton from "./components/LineFloatingButton";
 
 // Pages
 import Home from "./pages/Home";
@@ -17,6 +18,13 @@ import MemberProfile from "./pages/member/MemberProfile";
 import MemberCourses from "./pages/member/MemberCourses";
 import MemberOrders from "./pages/member/MemberOrders";
 import MemberRecommend from "./pages/member/MemberRecommend";
+import MemberWishlist from "./pages/member/MemberWishlist";
+import MemberNotes from "./pages/member/MemberNotes";
+
+// Static pages
+import About from "./pages/About";
+import Privacy from "./pages/Privacy";
+import Terms from "./pages/Terms";
 
 // Payment
 import PaymentResult from "./pages/PaymentResult";
@@ -36,6 +44,7 @@ import AdminReviews from "./pages/admin/AdminReviews";
 import AdminCategories from "./pages/admin/AdminCategories";
 import AdminInstructors from "./pages/admin/AdminInstructors";
 import AdminLinePush from "./pages/admin/AdminLinePush";
+import AdminAnnouncements from "./pages/admin/AdminAnnouncements";
 
 function Router() {
   return (
@@ -44,6 +53,9 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/courses" component={Courses} />
       <Route path="/courses/:slug" component={CourseDetail} />
+      <Route path="/about" component={About} />
+      <Route path="/privacy" component={Privacy} />
+      <Route path="/terms" component={Terms} />
 
       {/* Learning */}
       <Route path="/learn/:slug" component={Learn} />
@@ -60,6 +72,12 @@ function Router() {
       </Route>
       <Route path="/member/orders">
         <MemberLayout><MemberOrders /></MemberLayout>
+      </Route>
+      <Route path="/member/wishlist">
+        <MemberLayout><MemberWishlist /></MemberLayout>
+      </Route>
+      <Route path="/member/notes">
+        <MemberLayout><MemberNotes /></MemberLayout>
       </Route>
       <Route path="/member/recommend">
         <MemberLayout><MemberRecommend /></MemberLayout>
@@ -102,6 +120,9 @@ function Router() {
       <Route path="/admin/line-push">
         <AdminLayout><AdminLinePush /></AdminLayout>
       </Route>
+      <Route path="/admin/announcements">
+        <AdminLayout><AdminAnnouncements /></AdminLayout>
+      </Route>
       <Route path="/admin/settings">
         <AdminLayout><AdminSettings /></AdminLayout>
       </Route>
@@ -119,6 +140,7 @@ function App() {
         <TooltipProvider>
           <Toaster />
           <Router />
+          <LineFloatingButton />
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>

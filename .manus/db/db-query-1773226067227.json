@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE `announcements` (\n\t`id` int AUTO_INCREMENT NOT NULL,\n\t`title` varchar(256) NOT NULL,\n\t`content` text NOT NULL,\n\t`type` enum('info','warning','promotion','maintenance') NOT NULL DEFAULT 'info',\n\t`isActive` boolean NOT NULL DEFAULT true,\n\t`isPinned` boolean NOT NULL DEFAULT false,\n\t`startAt` timestamp,\n\t`endAt` timestamp,\n\t`createdAt` timestamp NOT NULL DEFAULT (now()),\n\t`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,\n\tCONSTRAINT `announcements_id` PRIMARY KEY(`id`)\n);\nCREATE TABLE `wishlist` (\n\t`id` int AUTO_INCREMENT NOT NULL,\n\t`userId` int NOT NULL,\n\t`courseId` int NOT NULL,\n\t`createdAt` timestamp NOT NULL DEFAULT (now()),\n\tCONSTRAINT `wishlist_id` PRIMARY KEY(`id`)\n);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 28JPo3Vw26mPY6V.root --database XBhqXuJ2WiY8ShtDj5vvMz --execute CREATE TABLE `announcements` (\n\t`id` int AUTO_INCREMENT NOT NULL,\n\t`title` varchar(256) NOT NULL,\n\t`content` text NOT NULL,\n\t`type` enum('info','warning','promotion','maintenance') NOT NULL DEFAULT 'info',\n\t`isActive` boolean NOT NULL DEFAULT true,\n\t`isPinned` boolean NOT NULL DEFAULT false,\n\t`startAt` timestamp,\n\t`endAt` timestamp,\n\t`createdAt` timestamp NOT NULL DEFAULT (now()),\n\t`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,\n\tCONSTRAINT `announcements_id` PRIMARY KEY(`id`)\n);\nCREATE TABLE `wishlist` (\n\t`id` int AUTO_INCREMENT NOT NULL,\n\t`userId` int NOT NULL,\n\t`courseId` int NOT NULL,\n\t`createdAt` timestamp NOT NULL DEFAULT (now()),\n\tCONSTRAINT `wishlist_id` PRIMARY KEY(`id`)\n);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 2127
+}
