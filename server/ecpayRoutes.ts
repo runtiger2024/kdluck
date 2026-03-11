@@ -3,6 +3,8 @@
  * - POST /api/ecpay/create-order: 產生綠界付款表單參數
  * - POST /api/ecpay/callback: 綠界付款結果通知 (ReturnURL)
  * - GET /api/ecpay/return: 付款完成後導回前端
+ * 
+ * API 金鑰從 DB site_config 讀取，fallback 到環境變數
  */
 import type { Express, Request, Response } from "express";
 import { generateECPayOrder, verifyCheckMacValue } from "./ecpay";
@@ -32,6 +34,12 @@ export function registerECPayRoutes(app: Express) {
         return res.status(400).json({ error: "此訂單非綠界付款" });
       }
 
+      // 從 DB 讀取 API 金鑰
+      const apiConfig = await db.getApiConfig();
+      if (!apiConfig.ecpayMerchantId || !apiConfig.ecpayHashKey || !apiConfig.ecpayHashIv) {
+        return res.status(503).json({ error: "綠界金流尚未設定，請至管理後台 → 支付設定進行配置" });
+      }
+
       // 取得課程名稱
       const course = await db.getCourseById(order.courseId);
       const itemName = course ? course.title : "線上課程";
@@ -39,14 +47,22 @@ export function registerECPayRoutes(app: Express) {
       // 使用 origin header 或 referer 來建構回調 URL
       const origin = req.headers.origin || req.headers.referer?.replace(/\/$/, "") || `${req.protocol}://${req.get("host")}`;
 
-      const { actionUrl, formParams } = generateECPayOrder({
-        orderNo: order.orderNo,
-        amount: Math.round(parseFloat(order.amount)),
-        itemName,
-        returnUrl: `${origin}/api/ecpay/callback`,
-        clientBackUrl: `${origin}/payment/result?orderNo=${order.orderNo}`,
-        orderResultUrl: `${origin}/payment/result?orderNo=${order.orderNo}`,
-      });
+      const { actionUrl, formParams } = generateECPayOrder(
+        {
+          orderNo: order.orderNo,
+          amount: Math.round(parseFloat(order.amount)),
+          itemName,
+          returnUrl: `${origin}/api/ecpay/callback`,
+          clientBackUrl: `${origin}/payment/result?orderNo=${order.orderNo}`,
+          orderResultUrl: `${origin}/payment/result?orderNo=${order.orderNo}`,
+        },
+        {
+          merchantId: apiConfig.ecpayMerchantId,
+          hashKey: apiConfig.ecpayHashKey,
+          hashIv: apiConfig.ecpayHashIv,
+          isProduction: apiConfig.ecpayIsProduction,
+        }
+      );
 
       return res.json({ actionUrl, formParams });
     } catch (error) {
@@ -65,8 +81,9 @@ export function registerECPayRoutes(app: Express) {
       const params = req.body as Record<string, string>;
       console.log("[ECPay] Callback received:", JSON.stringify(params));
 
-      // 驗證 CheckMacValue
-      if (!verifyCheckMacValue(params)) {
+      // 從 DB 讀取 API 金鑰驗證 CheckMacValue
+      const apiConfig = await db.getApiConfig();
+      if (!verifyCheckMacValue(params, apiConfig.ecpayHashKey, apiConfig.ecpayHashIv)) {
         console.error("[ECPay] CheckMacValue verification failed");
         return res.status(400).send("0|CheckMacValue Error");
       }
@@ -74,7 +91,6 @@ export function registerECPayRoutes(app: Express) {
       const merchantTradeNo = params.MerchantTradeNo;
       const rtnCode = params.RtnCode; // 1 = 付款成功
       const tradeNo = params.TradeNo; // 綠界交易編號
-      const paymentDate = params.PaymentDate;
 
       // 查找訂單
       const order = await db.getOrderByNo(merchantTradeNo);

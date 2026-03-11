@@ -2,6 +2,8 @@
  * LINE Login Express 路由
  * - GET /api/line/login: 導向 LINE Login 授權頁
  * - GET /api/line/callback: LINE Login 回調處理
+ * 
+ * API 金鑰從 DB site_config 讀取，fallback 到環境變數
  */
 import type { Express, Request, Response } from "express";
 import { exchangeLineToken, getLineProfile, parseLineIdToken, getLineLoginUrl } from "./line";
@@ -9,17 +11,17 @@ import * as db from "./db";
 import { sdk } from "./_core/sdk";
 import { COOKIE_NAME, ONE_YEAR_MS } from "../shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
-import { ENV } from "./_core/env";
 import crypto from "crypto";
 
 export function registerLineRoutes(app: Express) {
   /**
    * 導向 LINE Login 授權頁
    */
-  app.get("/api/line/login", (req: Request, res: Response) => {
+  app.get("/api/line/login", async (req: Request, res: Response) => {
     try {
-      if (!ENV.lineChannelId) {
-        return res.status(503).json({ error: "LINE Login 尚未設定" });
+      const apiConfig = await db.getApiConfig();
+      if (!apiConfig.lineChannelId) {
+        return res.status(503).json({ error: "LINE Login 尚未設定，請至管理後台 → 支付設定進行配置" });
       }
 
       const origin = req.query.origin as string || `${req.protocol}://${req.get("host")}`;
@@ -28,7 +30,7 @@ export function registerLineRoutes(app: Express) {
       const nonce = crypto.randomBytes(16).toString("hex");
 
       const redirectUri = `${origin}/api/line/callback`;
-      const loginUrl = getLineLoginUrl({ redirectUri, state, nonce });
+      const loginUrl = getLineLoginUrl({ redirectUri, state, nonce }, apiConfig.lineChannelId);
 
       res.redirect(loginUrl);
     } catch (error) {
@@ -65,8 +67,14 @@ export function registerLineRoutes(app: Express) {
 
       const redirectUri = `${stateData.origin}/api/line/callback`;
 
+      // 從 DB 讀取 API 金鑰
+      const apiConfig = await db.getApiConfig();
+
       // 換取 token
-      const tokenResponse = await exchangeLineToken(code, redirectUri);
+      const tokenResponse = await exchangeLineToken(code, redirectUri, {
+        channelId: apiConfig.lineChannelId,
+        channelSecret: apiConfig.lineChannelSecret,
+      });
 
       // 取得 LINE 個人資料
       const profile = await getLineProfile(tokenResponse.access_token);

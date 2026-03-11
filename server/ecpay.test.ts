@@ -118,18 +118,32 @@ describe("ECPay verifyCheckMacValue", () => {
       TotalAmount: "1000",
     };
 
-    const result = verifyCheckMacValue(params);
+    const result = verifyCheckMacValue(params, TEST_HASH_KEY, TEST_HASH_IV);
     expect(result).toBe(false);
+  });
+
+  it("should verify a valid CheckMacValue with hashKey/hashIv", () => {
+    const params: Record<string, string> = {
+      MerchantID: TEST_MERCHANT_ID,
+      MerchantTradeNo: "VERIFY002",
+      TotalAmount: "2000",
+      PaymentType: "aio",
+    };
+    const mac = generateCheckMacValue(params, TEST_HASH_KEY, TEST_HASH_IV);
+    params.CheckMacValue = mac;
+    const result = verifyCheckMacValue(params, TEST_HASH_KEY, TEST_HASH_IV);
+    expect(result).toBe(true);
   });
 });
 
 describe("ECPay generateECPayOrder", () => {
   it("should generate valid order form parameters", () => {
-    // 設定環境變數供測試使用
-    process.env.ECPAY_MERCHANT_ID = TEST_MERCHANT_ID;
-    process.env.ECPAY_HASH_KEY = TEST_HASH_KEY;
-    process.env.ECPAY_HASH_IV = TEST_HASH_IV;
-    process.env.ECPAY_IS_PRODUCTION = "false";
+    const testCredentials: import("./ecpay").ECPayCredentials = {
+      merchantId: TEST_MERCHANT_ID,
+      hashKey: TEST_HASH_KEY,
+      hashIv: TEST_HASH_IV,
+      isProduction: false,
+    };
 
     const { actionUrl, formParams } = generateECPayOrder({
       orderNo: "KD1704067200ABC123",
@@ -137,7 +151,7 @@ describe("ECPay generateECPayOrder", () => {
       itemName: "Python 入門課程",
       returnUrl: "https://example.com/api/ecpay/callback",
       clientBackUrl: "https://example.com/payment/result?orderNo=KD1704067200ABC123",
-    });
+    }, testCredentials);
 
     // 驗證 URL 為測試環境
     expect(actionUrl).toContain("payment-stage.ecpay.com.tw");
@@ -163,7 +177,12 @@ describe("ECPay generateECPayOrder", () => {
   });
 
   it("should return test URL when ECPAY_IS_PRODUCTION is false", () => {
-    process.env.ECPAY_IS_PRODUCTION = "false";
+    const testCredentials: import("./ecpay").ECPayCredentials = {
+      merchantId: TEST_MERCHANT_ID,
+      hashKey: TEST_HASH_KEY,
+      hashIv: TEST_HASH_IV,
+      isProduction: false,
+    };
 
     const { actionUrl } = generateECPayOrder({
       orderNo: "KD1704067200TEST01",
@@ -171,14 +190,19 @@ describe("ECPay generateECPayOrder", () => {
       itemName: "進階課程",
       returnUrl: "https://example.com/api/ecpay/callback",
       clientBackUrl: "https://example.com/payment/result",
-    });
+    }, testCredentials);
 
     // 測試環境應使用 stage URL
     expect(actionUrl).toContain("payment-stage.ecpay.com.tw");
   });
 
   it("should round amount to integer", () => {
-    process.env.ECPAY_IS_PRODUCTION = "false";
+    const testCredentials: import("./ecpay").ECPayCredentials = {
+      merchantId: TEST_MERCHANT_ID,
+      hashKey: TEST_HASH_KEY,
+      hashIv: TEST_HASH_IV,
+      isProduction: false,
+    };
 
     const { formParams } = generateECPayOrder({
       orderNo: "KD1704067200ROUND1",
@@ -186,13 +210,18 @@ describe("ECPay generateECPayOrder", () => {
       itemName: "課程",
       returnUrl: "https://example.com/callback",
       clientBackUrl: "https://example.com/result",
-    });
+    }, testCredentials);
 
     expect(formParams.TotalAmount).toBe("1500");
   });
 
   it("should truncate orderNo to 20 characters", () => {
-    process.env.ECPAY_IS_PRODUCTION = "false";
+    const testCredentials: import("./ecpay").ECPayCredentials = {
+      merchantId: TEST_MERCHANT_ID,
+      hashKey: TEST_HASH_KEY,
+      hashIv: TEST_HASH_IV,
+      isProduction: false,
+    };
 
     const longOrderNo = "KD17040672001234567890ABCDEF";
     const { formParams } = generateECPayOrder({
@@ -201,7 +230,7 @@ describe("ECPay generateECPayOrder", () => {
       itemName: "課程",
       returnUrl: "https://example.com/callback",
       clientBackUrl: "https://example.com/result",
-    });
+    }, testCredentials);
 
     expect(formParams.MerchantTradeNo.length).toBeLessThanOrEqual(20);
   });

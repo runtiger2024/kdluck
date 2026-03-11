@@ -135,6 +135,17 @@ vi.mock("./db", () => {
     deleteReview: vi.fn(),
     getUsersWithLineId: vi.fn().mockResolvedValue([]),
     getUserById: vi.fn().mockImplementation((id: number) => Promise.resolve(id === 1 ? { id: 1, name: "Test", lineUserId: "U123" } : null)),
+    getApiConfig: vi.fn().mockResolvedValue({
+      ecpayMerchantId: "3002607",
+      ecpayHashKey: "pwFHCqoQZGmho4w6",
+      ecpayHashIv: "EkRm7iFT261dpevs",
+      ecpayIsProduction: false,
+      amegoInvoiceNumber: "TEST12345678",
+      amegoAppKey: "test-app-key",
+      lineChannelId: "test-channel-id",
+      lineChannelSecret: "test-channel-secret",
+      lineMessagingToken: "test-messaging-token",
+    }),
   };
 });
 

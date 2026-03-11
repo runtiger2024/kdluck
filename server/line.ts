@@ -2,8 +2,9 @@
  * LINE 整合模組
  * - LINE Login OAuth 2.1
  * - LINE Messaging API 推播
+ * 
+ * 所有函數接受外部傳入金鑰參數，由呼叫端從 DB 或環境變數取得
  */
-import { ENV } from "./_core/env";
 
 // ─── LINE Login OAuth 2.1 ───
 
@@ -17,12 +18,20 @@ export interface LineLoginConfig {
   nonce?: string;
 }
 
+export interface LineLoginCredentials {
+  channelId: string;
+  channelSecret: string;
+}
+
+export interface LineMessagingCredentials {
+  token: string;
+}
+
 /**
  * 產生 LINE Login 授權 URL
  */
-export function getLineLoginUrl(config: LineLoginConfig): string {
-  const channelId = ENV.lineChannelId;
-  if (!channelId) throw new Error("LINE_CHANNEL_ID 未設定");
+export function getLineLoginUrl(config: LineLoginConfig, channelId: string): string {
+  if (!channelId) throw new Error("LINE_CHANNEL_ID 未設定，請至管理後台 → 支付設定進行配置");
 
   const params = new URLSearchParams({
     response_type: "code",
@@ -50,17 +59,21 @@ export interface LineTokenResponse {
 /**
  * 用授權碼換取 access token
  */
-export async function exchangeLineToken(code: string, redirectUri: string): Promise<LineTokenResponse> {
-  const channelId = ENV.lineChannelId;
-  const channelSecret = ENV.lineChannelSecret;
-  if (!channelId || !channelSecret) throw new Error("LINE Login 金鑰未設定");
+export async function exchangeLineToken(
+  code: string,
+  redirectUri: string,
+  credentials: LineLoginCredentials
+): Promise<LineTokenResponse> {
+  if (!credentials.channelId || !credentials.channelSecret) {
+    throw new Error("LINE Login 金鑰未設定，請至管理後台 → 支付設定進行配置");
+  }
 
   const body = new URLSearchParams({
     grant_type: "authorization_code",
     code,
     redirect_uri: redirectUri,
-    client_id: channelId,
-    client_secret: channelSecret,
+    client_id: credentials.channelId,
+    client_secret: credentials.channelSecret,
   });
 
   const response = await fetch(LINE_TOKEN_URL, {
@@ -124,8 +137,7 @@ const LINE_MESSAGING_URL = "https://api.line.me/v2/bot";
 /**
  * 推送訊息給單一使用者
  */
-export async function pushMessage(lineUserId: string, message: string): Promise<boolean> {
-  const token = ENV.lineMessagingToken;
+export async function pushMessage(lineUserId: string, message: string, token: string): Promise<boolean> {
   if (!token) {
     console.warn("[LINE] Messaging token not configured");
     return false;
@@ -159,8 +171,7 @@ export async function pushMessage(lineUserId: string, message: string): Promise<
 /**
  * 多播訊息（最多 500 人）
  */
-export async function multicastMessage(lineUserIds: string[], message: string): Promise<{ success: number; failed: number }> {
-  const token = ENV.lineMessagingToken;
+export async function multicastMessage(lineUserIds: string[], message: string, token: string): Promise<{ success: number; failed: number }> {
   if (!token) {
     console.warn("[LINE] Messaging token not configured");
     return { success: 0, failed: lineUserIds.length };
@@ -208,8 +219,7 @@ export async function multicastMessage(lineUserIds: string[], message: string): 
 /**
  * 廣播訊息給所有好友
  */
-export async function broadcastMessage(message: string): Promise<boolean> {
-  const token = ENV.lineMessagingToken;
+export async function broadcastMessage(message: string, token: string): Promise<boolean> {
   if (!token) {
     console.warn("[LINE] Messaging token not configured");
     return false;

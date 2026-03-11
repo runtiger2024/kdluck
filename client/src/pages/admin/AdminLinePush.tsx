@@ -104,10 +104,7 @@ export default function AdminLinePush() {
 
       <div className="rounded-lg bg-muted/50 p-4 text-sm text-muted-foreground">
         <p className="font-medium text-foreground mb-2">LINE Messaging API 設定說明</p>
-        <p>請在專案的 <strong>Settings → Secrets</strong> 中設定以下環境變數：</p>
-        <ul className="list-disc list-inside mt-2 space-y-1">
-          <li><code className="text-xs bg-muted px-1 py-0.5 rounded">LINE_CHANNEL_ACCESS_TOKEN</code> — LINE Messaging API Channel Access Token</li>
-        </ul>
+        <p>請至 <a href="/admin/payment" className="text-primary underline font-medium">支付與 API 設定</a> 頁面設定 LINE Messaging API 的 <strong>Channel Access Token</strong>。</p>
         <p className="mt-2">取得方式：前往 <a href="https://developers.line.biz/console/" target="_blank" rel="noopener" className="text-primary underline">LINE Developers Console</a> → 選擇 Messaging API Channel → Channel Access Token</p>
       </div>
 

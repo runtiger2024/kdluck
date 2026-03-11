@@ -2,9 +2,10 @@
  * 綠界 ECPay 金流整合模組
  * 支援全方位金流 (AIO) 付款
  * 文件: https://developers.ecpay.com.tw/
+ * 
+ * 所有函數接受外部傳入金鑰參數，由呼叫端從 DB 或環境變數取得
  */
 import crypto from "crypto";
-import { ENV } from "./_core/env";
 
 // 綠界 API 端點
 const ECPAY_API_URL = {
@@ -24,12 +25,9 @@ const ECPAY_API_URL = {
  */
 export function generateCheckMacValue(
   params: Record<string, string>,
-  hashKey?: string,
-  hashIv?: string
+  hashKey: string,
+  hashIv: string
 ): string {
-  const key = hashKey ?? ENV.ecpayHashKey;
-  const iv = hashIv ?? ENV.ecpayHashIv;
-
   // 1. 排序（case-insensitive）
   const sortedKeys = Object.keys(params).sort((a, b) =>
     a.toLowerCase().localeCompare(b.toLowerCase())
@@ -39,7 +37,7 @@ export function generateCheckMacValue(
   const paramStr = sortedKeys.map((k) => `${k}=${params[k]}`).join("&");
 
   // 3. 前後加上 HashKey 和 HashIV
-  const raw = `HashKey=${key}&${paramStr}&HashIV=${iv}`;
+  const raw = `HashKey=${hashKey}&${paramStr}&HashIV=${hashIv}`;
 
   // 4. URL encode
   let encoded = encodeURIComponent(raw);
@@ -67,7 +65,9 @@ export function generateCheckMacValue(
  * 驗證綠界回傳的 CheckMacValue
  */
 export function verifyCheckMacValue(
-  params: Record<string, string>
+  params: Record<string, string>,
+  hashKey: string,
+  hashIv: string
 ): boolean {
   const receivedMac = params.CheckMacValue;
   if (!receivedMac) return false;
@@ -76,7 +76,7 @@ export function verifyCheckMacValue(
   const paramsWithoutMac = { ...params };
   delete paramsWithoutMac.CheckMacValue;
 
-  const calculated = generateCheckMacValue(paramsWithoutMac);
+  const calculated = generateCheckMacValue(paramsWithoutMac, hashKey, hashIv);
   return calculated === receivedMac;
 }
 
@@ -89,16 +89,23 @@ export interface ECPayOrderParams {
   orderResultUrl?: string; // 付款完成後導向頁面（前端）
 }
 
+export interface ECPayCredentials {
+  merchantId: string;
+  hashKey: string;
+  hashIv: string;
+  isProduction: boolean;
+}
+
 /**
  * 產生綠界 AIO 付款表單參數
  */
-export function generateECPayOrder(params: ECPayOrderParams): {
+export function generateECPayOrder(
+  params: ECPayOrderParams,
+  credentials: ECPayCredentials
+): {
   actionUrl: string;
   formParams: Record<string, string>;
 } {
-  const merchantId = ENV.ecpayMerchantId;
-  const isProduction = ENV.ecpayIsProduction;
-
   // 交易時間格式: yyyy/MM/dd HH:mm:ss
   const now = new Date();
   const tradeDate = [
@@ -112,7 +119,7 @@ export function generateECPayOrder(params: ECPayOrderParams): {
   ].join(":");
 
   const formParams: Record<string, string> = {
-    MerchantID: merchantId,
+    MerchantID: credentials.merchantId,
     MerchantTradeNo: params.orderNo.substring(0, 20), // 最多20字元
     MerchantTradeDate: tradeDate,
     PaymentType: "aio",
@@ -128,9 +135,9 @@ export function generateECPayOrder(params: ECPayOrderParams): {
   };
 
   // 產生 CheckMacValue
-  formParams.CheckMacValue = generateCheckMacValue(formParams);
+  formParams.CheckMacValue = generateCheckMacValue(formParams, credentials.hashKey, credentials.hashIv);
 
-  const actionUrl = isProduction
+  const actionUrl = credentials.isProduction
     ? ECPAY_API_URL.production
     : ECPAY_API_URL.test;
 

@@ -10,6 +10,7 @@ import { storagePut, storageGet } from "./storage";
 import { invokeLLM } from "./_core/llm";
 import { issueInvoice, voidInvoice } from "./amego";
 import { pushMessage, multicastMessage, broadcastMessage } from "./line";
+import { getApiConfig } from "./db";
 
 // ─── Auth Router ───
 const authRouter = router({
@@ -658,6 +659,8 @@ const invoiceRouter = router({
     });
 
     try {
+      const apiConfig = await getApiConfig();
+      const amegoCredentials = { invoiceNumber: apiConfig.amegoInvoiceNumber, appKey: apiConfig.amegoAppKey };
       const result = await issueInvoice({
         orderId: input.orderNo,
         buyerIdentifier: input.buyerIdentifier,
@@ -669,7 +672,7 @@ const invoiceRouter = router({
         npoban: input.npoban,
         items: [{ name: input.itemName, quantity: 1, unitPrice: input.amount, amount: input.amount }],
         totalAmount: input.amount,
-      });
+      }, amegoCredentials);
 
       if (result && result.Status === "Success") {
         await db.updateInvoice(invoiceId!, {
@@ -703,7 +706,9 @@ const invoiceRouter = router({
     reason: z.string().optional(),
   })).mutation(async ({ input }) => {
     try {
-      const result = await voidInvoice(input.invoiceNumber, input.invoiceDate, input.reason);
+      const apiConfig = await getApiConfig();
+      const amegoCredentials = { invoiceNumber: apiConfig.amegoInvoiceNumber, appKey: apiConfig.amegoAppKey };
+      const result = await voidInvoice(input.invoiceNumber, input.invoiceDate, amegoCredentials, input.reason);
       if (result && result.Status === "Success") {
         await db.updateInvoice(input.id, { status: "voided", rawResponse: JSON.stringify(result) });
         return { success: true };
@@ -740,13 +745,16 @@ const linePushRouter = router({
     try {
       let result: { success: number; failed: number } = { success: 0, failed: 0 };
 
+      const apiConfig = await getApiConfig();
+      const lineToken = apiConfig.lineMessagingToken;
+
       if (input.targetType === "all") {
-        const ok = await broadcastMessage(input.messageContent);
+        const ok = await broadcastMessage(input.messageContent, lineToken);
         result = ok ? { success: 1, failed: 0 } : { success: 0, failed: 1 };
       } else if (input.targetType === "user" && input.targetUserId) {
         const user = await db.getUserById(input.targetUserId);
         if (user?.lineUserId) {
-          const ok = await pushMessage(user.lineUserId, input.messageContent);
+          const ok = await pushMessage(user.lineUserId, input.messageContent, lineToken);
           result = ok ? { success: 1, failed: 0 } : { success: 0, failed: 1 };
         } else {
           result = { success: 0, failed: 1 };
@@ -755,7 +763,7 @@ const linePushRouter = router({
         const lineUsers = await db.getUsersWithLineId();
         const lineIds = lineUsers.map(u => u.lineUserId!).filter(Boolean);
         if (lineIds.length > 0) {
-          result = await multicastMessage(lineIds, input.messageContent);
+          result = await multicastMessage(lineIds, input.messageContent, lineToken);
         }
       }
 

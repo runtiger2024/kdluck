@@ -1,9 +1,10 @@
 /**
  * 光貿電子發票 API 整合模組
  * API 文件: https://invoice.amego.tw/api_doc/
+ * 
+ * 所有函數接受外部傳入金鑰參數，由呼叫端從 DB 或環境變數取得
  */
 import crypto from "crypto";
-import { ENV } from "./_core/env";
 
 const AMEGO_API_URL = "https://invoice-api.amego.tw";
 
@@ -11,28 +12,30 @@ const AMEGO_API_URL = "https://invoice-api.amego.tw";
  * 產生光貿 API 簽名
  * sign = md5(data JSON字串 + time + APP Key)
  */
-function generateSign(dataJson: string, time: number, appKey: string): string {
+export function generateSign(dataJson: string, time: number, appKey: string): string {
   const raw = dataJson + time + appKey;
   return crypto.createHash("md5").update(raw).digest("hex");
+}
+
+export interface AmegoCredentials {
+  invoiceNumber: string;
+  appKey: string;
 }
 
 /**
  * 呼叫光貿 API
  */
-async function callAmegoApi(endpoint: string, data: Record<string, any>) {
-  const invoiceNumber = ENV.amegoInvoiceNumber;
-  const appKey = ENV.amegoAppKey;
-
-  if (!invoiceNumber || !appKey) {
-    throw new Error("光貿 API 金鑰未設定（AMEGO_INVOICE_NUMBER / AMEGO_APP_KEY）");
+async function callAmegoApi(endpoint: string, data: Record<string, any>, credentials: AmegoCredentials) {
+  if (!credentials.invoiceNumber || !credentials.appKey) {
+    throw new Error("光貿 API 金鑰未設定，請至管理後台 → 支付設定進行配置");
   }
 
   const dataJson = JSON.stringify(data);
   const time = Math.floor(Date.now() / 1000);
-  const sign = generateSign(dataJson, time, appKey);
+  const sign = generateSign(dataJson, time, credentials.appKey);
 
   const body = new URLSearchParams({
-    invoice: invoiceNumber,
+    invoice: credentials.invoiceNumber,
     data: dataJson,
     time: String(time),
     sign,
@@ -69,7 +72,7 @@ export interface IssueInvoiceParams {
 /**
  * 開立發票（自動配號）
  */
-export async function issueInvoice(params: IssueInvoiceParams) {
+export async function issueInvoice(params: IssueInvoiceParams, credentials: AmegoCredentials) {
   const salesAmount = params.totalAmount;
   const taxAmount = params.buyerIdentifier && params.buyerIdentifier !== "0000000000"
     ? Math.round(salesAmount * 0.05)
@@ -103,43 +106,38 @@ export async function issueInvoice(params: IssueInvoiceParams) {
     TotalAmount: salesAmount + taxAmount,
   };
 
-  const result = await callAmegoApi("/json/f0401", data);
+  const result = await callAmegoApi("/json/f0401", data, credentials);
   return result;
 }
 
 /**
  * 作廢發票
  */
-export async function voidInvoice(invoiceNumber: string, invoiceDate: string, reason?: string) {
+export async function voidInvoice(invoiceNumber: string, invoiceDate: string, credentials: AmegoCredentials, reason?: string) {
   const data = {
     InvoiceNumber: invoiceNumber,
     InvoiceDate: invoiceDate,
     VoidReason: reason || "作廢",
   };
 
-  const result = await callAmegoApi("/json/f0501", data);
+  const result = await callAmegoApi("/json/f0501", data, credentials);
   return result;
 }
 
 /**
  * 查詢發票狀態
  */
-export async function queryInvoiceStatus(invoiceNumber: string) {
+export async function queryInvoiceStatus(invoiceNumber: string, credentials: AmegoCredentials) {
   const data = { InvoiceNumber: invoiceNumber };
-  const result = await callAmegoApi("/json/invoice_status", data);
+  const result = await callAmegoApi("/json/invoice_status", data, credentials);
   return result;
 }
 
 /**
  * 查詢發票列表
  */
-export async function queryInvoiceList(startDate: string, endDate: string) {
+export async function queryInvoiceList(startDate: string, endDate: string, credentials: AmegoCredentials) {
   const data = { StartDate: startDate, EndDate: endDate };
-  const result = await callAmegoApi("/json/invoice_list", data);
+  const result = await callAmegoApi("/json/invoice_list", data, credentials);
   return result;
 }
-
-/**
- * 產生簽名（用於測試）
- */
-export { generateSign };

@@ -627,3 +627,35 @@ export async function getUserById(id: number) {
   const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
   return result[0];
 }
+
+// ─── API Config (從 DB 讀取，fallback 到環境變數) ───
+export interface ApiConfig {
+  ecpayMerchantId: string;
+  ecpayHashKey: string;
+  ecpayHashIv: string;
+  ecpayIsProduction: boolean;
+  amegoInvoiceNumber: string;
+  amegoAppKey: string;
+  lineChannelId: string;
+  lineChannelSecret: string;
+  lineMessagingToken: string;
+}
+
+/**
+ * 從 DB site_config 讀取 API 金鑰，若 DB 無值則 fallback 到環境變數
+ * 這讓管理員可以直接在管理後台設定金鑰，無需接觸環境變數
+ */
+export async function getApiConfig(): Promise<ApiConfig> {
+  const config = await getSiteConfig();
+  return {
+    ecpayMerchantId: config.ecpay_merchant_id || process.env.ECPAY_MERCHANT_ID || "",
+    ecpayHashKey: config.ecpay_hash_key || process.env.ECPAY_HASH_KEY || "",
+    ecpayHashIv: config.ecpay_hash_iv || process.env.ECPAY_HASH_IV || "",
+    ecpayIsProduction: (config.ecpay_is_production || process.env.ECPAY_IS_PRODUCTION || "false") === "true",
+    amegoInvoiceNumber: config.amego_invoice_number || process.env.AMEGO_INVOICE_NUMBER || "",
+    amegoAppKey: config.amego_app_key || process.env.AMEGO_APP_KEY || "",
+    lineChannelId: config.line_channel_id || process.env.LINE_CHANNEL_ID || "",
+    lineChannelSecret: config.line_channel_secret || process.env.LINE_CHANNEL_SECRET || "",
+    lineMessagingToken: config.line_messaging_token || process.env.LINE_MESSAGING_TOKEN || "",
+  };
+}

@@ -68,3 +68,19 @@
 - [x] 管理後台：LINE 推播管理頁面（發送推播、查看歷史、模板套用）
 - [x] 管理後台側邊欄新增所有導航項目
 - [x] 撰寫新功能 Vitest 測試（79 tests passed）
+
+## Bug 修復
+- [x] /admin/settings 頁面缺少支付API設定 → 已建立獨立 /admin/payment 頁面
+- [x] 深度檢查所有管理後台頁面是否正確呈現
+
+## API 金鑰管理重構
+- [x] 移除所有「Settings → Secrets」的引導文字
+- [x] 支付設定頁面：加入綠界 MerchantID/HashKey/HashIV 直接輸入欄位
+- [x] 支付設定頁面：加入光貿 InvoiceNumber/AppKey 直接輸入欄位
+- [x] 支付設定頁面：加入 LINE Channel ID/Secret/Messaging Token 直接輸入欄位
+- [x] 後端 ecpay.ts：改為從 DB site_config 讀取金鑰（fallback 到環境變數）
+- [x] 後端 amego.ts：改為從 DB site_config 讀取金鑰
+- [x] 後端 line.ts：改為從 DB site_config 讀取金鑰
+- [x] 金鑰欄位使用密碼遮罩顯示，提升安全性
+- [x] 深度檢查所有其他可能的問題
+- [x] Vitest 測試全部通過（80 tests passed）
