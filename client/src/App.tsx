@@ -18,6 +18,9 @@ import MemberCourses from "./pages/member/MemberCourses";
 import MemberOrders from "./pages/member/MemberOrders";
 import MemberRecommend from "./pages/member/MemberRecommend";
 
+// Payment
+import PaymentResult from "./pages/PaymentResult";
+
 // Admin pages
 import AdminLayout from "./pages/admin/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -38,6 +41,9 @@ function Router() {
 
       {/* Learning */}
       <Route path="/learn/:slug" component={Learn} />
+
+      {/* Payment */}
+      <Route path="/payment/result" component={PaymentResult} />
 
       {/* Member */}
       <Route path="/member">

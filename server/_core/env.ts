@@ -7,4 +7,9 @@ export const ENV = {
   isProduction: process.env.NODE_ENV === "production",
   forgeApiUrl: process.env.BUILT_IN_FORGE_API_URL ?? "",
   forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
+  // ECPay
+  ecpayMerchantId: process.env.ECPAY_MERCHANT_ID ?? "",
+  ecpayHashKey: process.env.ECPAY_HASH_KEY ?? "",
+  ecpayHashIv: process.env.ECPAY_HASH_IV ?? "",
+  ecpayIsProduction: process.env.ECPAY_IS_PRODUCTION === "true",
 };

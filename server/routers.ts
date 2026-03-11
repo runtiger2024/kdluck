@@ -261,7 +261,7 @@ const lessonRouter = router({
 const orderRouter = router({
   create: protectedProcedure.input(z.object({
     courseId: z.number(),
-    paymentMethod: z.enum(["stripe", "ecpay", "bank_transfer", "free"]),
+    paymentMethod: z.enum(["ecpay", "bank_transfer", "free"]),
     couponCode: z.string().optional(),
   })).mutation(async ({ input, ctx }) => {
     // Check if already enrolled

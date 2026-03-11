@@ -27,7 +27,7 @@ export default function AdminOrders() {
   };
 
   const methodMap: Record<string, string> = {
-    stripe: "Stripe", ecpay: "綠界", bank_transfer: "銀行轉帳", free: "免費",
+    ecpay: "綠界 ECPay", bank_transfer: "銀行轉帳", free: "免費",
   };
 
   return (
@@ -79,8 +79,8 @@ export default function AdminOrders() {
                     <TableCell>{order.couponCode ?? "-"}</TableCell>
                     <TableCell className="text-xs">{new Date(order.createdAt).toLocaleString("zh-TW")}</TableCell>
                     <TableCell className="text-right">
-                      {order.paymentStatus === "pending" && order.paymentMethod === "bank_transfer" && (
-                        <Button size="sm" variant="outline" onClick={() => { if (confirm("確認此訂單已付款？")) confirmPayment.mutate({ orderNo: order.orderNo }); }}>
+                      {order.paymentStatus === "pending" && (
+                        <Button size="sm" variant="outline" onClick={() => { if (confirm("確認此訂單已付款？將自動開通課程。")) confirmPayment.mutate({ orderNo: order.orderNo }); }}>
                           <CheckCircle className="h-4 w-4 mr-1" />確認付款
                         </Button>
                       )}

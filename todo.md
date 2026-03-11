@@ -45,3 +45,13 @@
 
 ## 部署
 - [x] 最終 checkpoint 與交付
+
+## 綠界 ECPay 支付整合
+- [x] 配置綠界 MerchantID、HashKey、HashIV
+- [x] 建立綠界 ECPay 訂單產生 API（後端）
+- [x] 建立綠界付款回調 Webhook 處理
+- [x] 建立付款成功/取消頁面
+- [x] 更新前端結帳流程支援綠界與線下轉帳
+- [x] 付款成功後自動開通課程
+- [x] 完善線下轉帳流程（顯示轉帳資訊、管理員手動確認）
+- [x] 撰寫綠界相關 Vitest 測試（62 tests passed）

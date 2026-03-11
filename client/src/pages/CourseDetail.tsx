@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { BookOpen, Clock, Play, Star, Users, Lock, CheckCircle, ChevronDown, ChevronUp, ShoppingCart } from "lucide-react";
+import { BookOpen, Clock, Play, Star, Users, Lock, CheckCircle, ChevronDown, ChevronUp, ShoppingCart, Loader2, CreditCard, Building2 } from "lucide-react";
 import { useState } from "react";
 import { useParams, useLocation } from "wouter";
 import { toast } from "sonner";
@@ -23,7 +23,8 @@ export default function CourseDetail() {
   const [, setLocation] = useLocation();
   const [expandedChapter, setExpandedChapter] = useState<number | null>(null);
   const [orderDialog, setOrderDialog] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<"stripe" | "ecpay" | "bank_transfer" | "free">("bank_transfer");
+  const [paymentMethod, setPaymentMethod] = useState<"ecpay" | "bank_transfer" | "free">("ecpay");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [couponCode, setCouponCode] = useState("");
   const [reviewText, setReviewText] = useState("");
   const [reviewRating, setReviewRating] = useState(5);
@@ -37,19 +38,7 @@ export default function CourseDetail() {
   const { data: couponResult } = trpc.coupon.validate.useQuery({ code: couponCode, courseId: course?.id }, { enabled: couponCode.length > 3 });
 
   const utils = trpc.useUtils();
-  const createOrder = trpc.order.create.useMutation({
-    onSuccess: (data) => {
-      setOrderDialog(false);
-      if (data.status === "paid") {
-        toast.success("課程已開通！");
-        utils.enrollment.check.invalidate({ courseId: course?.id ?? 0 });
-      } else {
-        toast.success(`訂單已建立：${data.orderNo}，請完成付款`);
-        setLocation("/member/orders");
-      }
-    },
-    onError: (e) => toast.error(e.message),
-  });
+  const createOrder = trpc.order.create.useMutation();
 
   const createReview = trpc.review.create.useMutation({
     onSuccess: () => { utils.review.listByCourse.invalidate({ courseId: course?.id ?? 0 }); setReviewText(""); toast.success("評價已提交"); },
@@ -90,11 +79,68 @@ export default function CourseDetail() {
     }
   };
 
-  const submitOrder = () => {
+  const submitOrder = async () => {
+    setIsSubmitting(true);
     createOrder.mutate({
       courseId: course.id,
       paymentMethod,
       couponCode: couponCode || undefined,
+    }, {
+      onSuccess: async (data) => {
+        if (data.status === "paid") {
+          // 免費課程直接開通
+          setOrderDialog(false);
+          toast.success("課程已開通！");
+          utils.enrollment.check.invalidate({ courseId: course.id });
+          setIsSubmitting(false);
+          return;
+        }
+        if (paymentMethod === "ecpay") {
+          // 呼叫 ECPay API 取得付款表單
+          try {
+            const resp = await fetch("/api/ecpay/create-order", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ orderNo: data.orderNo }),
+            });
+            const ecpayData = await resp.json();
+            if (ecpayData.actionUrl && ecpayData.formParams) {
+              // 建立隱藏表單並提交到綠界
+              const form = document.createElement("form");
+              form.method = "POST";
+              form.action = ecpayData.actionUrl;
+              form.target = "_blank";
+              Object.entries(ecpayData.formParams).forEach(([key, value]) => {
+                const input = document.createElement("input");
+                input.type = "hidden";
+                input.name = key;
+                input.value = value as string;
+                form.appendChild(input);
+              });
+              document.body.appendChild(form);
+              form.submit();
+              document.body.removeChild(form);
+              setOrderDialog(false);
+              toast.success("已開啟綠界付款頁面，請在新視窗完成付款");
+              setLocation(`/payment/result?orderNo=${data.orderNo}`);
+            } else {
+              toast.error(ecpayData.error || "建立綠界付款失敗");
+            }
+          } catch (e) {
+            toast.error("連接綠界付款失敗，請稍後再試");
+          }
+        } else {
+          // 銀行轉帳
+          setOrderDialog(false);
+          toast.success(`訂單已建立：${data.orderNo}，請完成轉帳付款`);
+          setLocation("/member/orders");
+        }
+        setIsSubmitting(false);
+      },
+      onError: (e) => {
+        toast.error(e.message);
+        setIsSubmitting(false);
+      },
     });
   };
 
@@ -359,22 +405,33 @@ export default function CourseDetail() {
               <Select value={paymentMethod} onValueChange={(v: any) => setPaymentMethod(v)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="ecpay">綠界 ECPay（信用卡/ATM/超商）</SelectItem>
                   <SelectItem value="bank_transfer">銀行轉帳</SelectItem>
-                  <SelectItem value="stripe">Stripe 信用卡</SelectItem>
-                  <SelectItem value="ecpay">綠界 ECPay</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+            {paymentMethod === "ecpay" && (
+              <div className="p-3 rounded-lg bg-primary/5 border border-primary/20 text-sm">
+                <div className="flex items-center gap-2 mb-1">
+                  <CreditCard className="h-4 w-4 text-primary" />
+                  <p className="font-medium">綠界 ECPay 付款</p>
+                </div>
+                <p className="text-muted-foreground">支援信用卡、ATM 轉帳、超商代碼等多種付款方式。點擊確認後將跳轉至綠界安全付款頁面。</p>
+              </div>
+            )}
             {paymentMethod === "bank_transfer" && (
               <div className="p-3 rounded-lg bg-secondary/30 text-sm">
-                <p className="font-medium mb-1">銀行轉帳資訊</p>
-                <p className="text-muted-foreground">請轉帳至指定帳戶後，管理員將手動確認付款並開通課程。</p>
+                <div className="flex items-center gap-2 mb-1">
+                  <Building2 className="h-4 w-4" />
+                  <p className="font-medium">銀行轉帳資訊</p>
+                </div>
+                <p className="text-muted-foreground">請轉帳至指定帳戶後，管理員將手動確認付款並開通課程。處理時間約 1-2 個工作天。</p>
               </div>
             )}
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setOrderDialog(false)}>取消</Button>
-              <Button onClick={submitOrder} disabled={createOrder.isPending}>
-                確認下單
+              <Button variant="outline" onClick={() => setOrderDialog(false)} disabled={isSubmitting}>取消</Button>
+              <Button onClick={submitOrder} disabled={isSubmitting}>
+                {isSubmitting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />處理中...</> : paymentMethod === "ecpay" ? "前往綠界付款" : "確認下單"}
               </Button>
             </div>
           </div>

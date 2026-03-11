@@ -15,7 +15,7 @@ export default function MemberOrders() {
   };
 
   const methodMap: Record<string, string> = {
-    stripe: "Stripe", ecpay: "綠界", bank_transfer: "銀行轉帳", free: "免費",
+    ecpay: "綠界 ECPay", bank_transfer: "銀行轉帳", free: "免費",
   };
 
   return (
