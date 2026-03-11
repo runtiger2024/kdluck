@@ -1,0 +1,8 @@
+{
+  "query": "SELECT config_key, CASE WHEN config_value IS NOT NULL AND config_value != '' THEN CONCAT(LEFT(config_value, 5), '***') ELSE '(未設定)' END AS masked_value FROM site_config WHERE config_key LIKE 'line_%';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 28JPo3Vw26mPY6V.root --database XBhqXuJ2WiY8ShtDj5vvMz --execute SELECT config_key, CASE WHEN config_value IS NOT NULL AND config_value != '' THEN CONCAT(LEFT(config_value, 5), '***') ELSE '(未設定)' END AS masked_value FROM site_config WHERE config_key LIKE 'line_%';",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 1: Unknown column 'config_key' in 'where clause'"
+  ]
+}

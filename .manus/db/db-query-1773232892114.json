@@ -1,0 +1,26 @@
+{
+  "query": "SELECT configKey, CASE WHEN configValue IS NOT NULL AND configValue != '' THEN CONCAT(LEFT(configValue, 5), '***') ELSE '(未設定)' END AS masked_value FROM site_config WHERE configKey LIKE 'line_%';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 28JPo3Vw26mPY6V.root --database XBhqXuJ2WiY8ShtDj5vvMz --execute SELECT configKey, CASE WHEN configValue IS NOT NULL AND configValue != '' THEN CONCAT(LEFT(configValue, 5), '***') ELSE '(未設定)' END AS masked_value FROM site_config WHERE configKey LIKE 'line_%';",
+  "rows": [
+    {
+      "configKey": "line_login_enabled",
+      "masked_value": "true***"
+    },
+    {
+      "configKey": "line_channel_id",
+      "masked_value": "20093***"
+    },
+    {
+      "configKey": "line_channel_secret",
+      "masked_value": "7e3a1***"
+    },
+    {
+      "configKey": "line_messaging_token",
+      "masked_value": "h8VIm***"
+    }
+  ],
+  "messages": [],
+  "stdout": "configKey\tmasked_value\nline_login_enabled\ttrue***\nline_channel_id\t20093***\nline_channel_secret\t7e3a1***\nline_messaging_token\th8VIm***\n",
+  "stderr": "",
+  "execution_time_ms": 1617
+}

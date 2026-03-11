@@ -1,0 +1,17 @@
+{
+  "query": "SELECT id, name, email, lineUserId, loginMethod FROM users WHERE lineUserId IS NOT NULL AND lineUserId != '' LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 28JPo3Vw26mPY6V.root --database XBhqXuJ2WiY8ShtDj5vvMz --execute SELECT id, name, email, lineUserId, loginMethod FROM users WHERE lineUserId IS NOT NULL AND lineUserId != '' LIMIT 10;",
+  "rows": [
+    {
+      "id": "1",
+      "name": "BBRO 軟迪",
+      "email": "randyhuang1007@gmail.com",
+      "lineUserId": "U82b1a53660dbf81c5e0431b7902d3ba6",
+      "loginMethod": "google"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\temail\tlineUserId\tloginMethod\n1\tBBRO 軟迪\trandyhuang1007@gmail.com\tU82b1a53660dbf81c5e0431b7902d3ba6\tgoogle\n",
+  "stderr": "",
+  "execution_time_ms": 1529
+}

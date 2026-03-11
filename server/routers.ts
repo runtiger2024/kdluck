@@ -435,6 +435,10 @@ const orderRouter = router({
   }).optional()).query(async ({ input }) => {
     return db.getOrdersWithPendingReview(input?.page, input?.limit);
   }),
+  // Admin: 待審核數量（輕量查詢，供側邊欄徽章使用）
+  pendingReviewCount: adminProcedure.query(async () => {
+    return { count: await db.getPendingReviewCount() };
+  }),
 });
 
 // ─── Enrollment Router ───

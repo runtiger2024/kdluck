@@ -108,6 +108,7 @@ vi.mock("./db", () => {
     uploadPaymentProof: vi.fn(),
     reviewPaymentProof: vi.fn(),
     getOrdersWithPendingReview: vi.fn().mockResolvedValue({ items: [], total: 0 }),
+    getPendingReviewCount: vi.fn().mockResolvedValue(3),
     createEnrollment: vi.fn(),
     isEnrolled: vi.fn().mockResolvedValue(false),
     getEnrolledCourses: vi.fn().mockResolvedValue([]),
@@ -1750,5 +1751,25 @@ describe("Admin - User Account Detail", () => {
   it("denies non-admin access to account detail", async () => {
     const caller = appRouter.createCaller(createUserContext());
     await expect(caller.user.accountDetail({ userId: 1 })).rejects.toThrow();
+  });
+});
+
+
+// ─── Pending Review Count Badge Tests ───
+describe("Admin - Pending Review Count", () => {
+  it("returns pending review count for admin", async () => {
+    const caller = appRouter.createCaller(createAdminContext());
+    const result = await caller.order.pendingReviewCount();
+    expect(result.count).toBe(3);
+  });
+
+  it("denies non-admin access to pending review count", async () => {
+    const caller = appRouter.createCaller(createUserContext());
+    await expect(caller.order.pendingReviewCount()).rejects.toThrow();
+  });
+
+  it("denies anonymous access to pending review count", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    await expect(caller.order.pendingReviewCount()).rejects.toThrow();
   });
 });

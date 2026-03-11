@@ -201,3 +201,17 @@
 - [x] 前端：管理後台用戶管理增強（搜尋 + 帳號詳情彈窗 + LINE 綁定狀態 + 活動概覽）
 - [x] 前端：Footer 加入帳號問題協助連結
 - [x] 撰寫相關 Vitest 測試（160 tests passed）
+
+## LINE 推播通知深度檢查與修復
+- [x] 追蹤 ECPay 付款成功回調 → notifyPurchaseSuccess 完整呼叫鏈（已正確串接）
+- [x] 追蹤 notifyPurchaseSuccess → sendNotification → LINE pushMessage 完整呼叫鏈（已正確串接）
+- [x] 檢查 LINE pushMessage 函數是否正確讀取 API Token（從 DB site_config 讀取，長度 172）
+- [x] 檢查用戶 lineUserId 是否正確傳入推播函數（User #1 已綁定，lineUserId 正確）
+- [x] 端到端測試：直接呼叫 LINE API 推播成功（HTTP 200，用戶已收到測試訊息）
+- [x] 確認結論：程式碼已正確串接，之前的訂單是在通知功能加入前建立的
+
+## 管理後台待審核訂單紅色徽章通知
+- [x] 後端：新增 pendingReviewCount API（輕量查詢，僅回傳 count）
+- [x] 前端：AdminLayout 側邊欄「訂單管理」項目旁顯示紅色數字徽章
+- [x] 前端：30 秒自動輪詢更新待審核數量
+- [x] 撰寫 Vitest 測試（163 tests passed）

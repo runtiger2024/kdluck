@@ -1,0 +1,30 @@
+{
+  "query": "SELECT configKey, LENGTH(configValue) AS value_length, CASE WHEN configValue IS NULL THEN 'NULL' WHEN configValue = '' THEN 'EMPTY' ELSE 'HAS_VALUE' END AS status FROM site_config WHERE configKey LIKE 'line_%';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 28JPo3Vw26mPY6V.root --database XBhqXuJ2WiY8ShtDj5vvMz --execute SELECT configKey, LENGTH(configValue) AS value_length, CASE WHEN configValue IS NULL THEN 'NULL' WHEN configValue = '' THEN 'EMPTY' ELSE 'HAS_VALUE' END AS status FROM site_config WHERE configKey LIKE 'line_%';",
+  "rows": [
+    {
+      "configKey": "line_login_enabled",
+      "value_length": "4",
+      "status": "HAS_VALUE"
+    },
+    {
+      "configKey": "line_channel_id",
+      "value_length": "10",
+      "status": "HAS_VALUE"
+    },
+    {
+      "configKey": "line_channel_secret",
+      "value_length": "32",
+      "status": "HAS_VALUE"
+    },
+    {
+      "configKey": "line_messaging_token",
+      "value_length": "172",
+      "status": "HAS_VALUE"
+    }
+  ],
+  "messages": [],
+  "stdout": "configKey\tvalue_length\tstatus\nline_login_enabled\t4\tHAS_VALUE\nline_channel_id\t10\tHAS_VALUE\nline_channel_secret\t32\tHAS_VALUE\nline_messaging_token\t172\tHAS_VALUE\n",
+  "stderr": "",
+  "execution_time_ms": 1518
+}

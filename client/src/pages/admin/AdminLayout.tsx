@@ -6,6 +6,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { getLoginUrl } from "@/const";
+import { trpc } from "@/lib/trpc";
 import {
   LayoutDashboard, BookOpen, ShoppingCart, Users, Ticket, Settings, LogOut,
   ArrowLeft, CreditCard, FileText, Star, GraduationCap, FolderOpen, MessageSquare, Megaphone, Bell,
@@ -31,7 +32,7 @@ const menuGroups = [
   {
     label: "交易管理",
     items: [
-      { icon: ShoppingCart, label: "訂單管理", path: "/admin/orders" },
+      { icon: ShoppingCart, label: "訂單管理", path: "/admin/orders", badgeKey: "pendingReview" as const },
       { icon: CreditCard, label: "支付設定", path: "/admin/payment" },
       { icon: FileText, label: "發票管理", path: "/admin/invoices" },
       { icon: Ticket, label: "優惠券", path: "/admin/coupons" },
@@ -57,6 +58,13 @@ const menuGroups = [
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { user, loading, logout } = useAuth();
   const [location, setLocation] = useLocation();
+
+  // 查詢待審核憑證數量（每 30 秒自動刷新）
+  const { data: pendingData } = trpc.order.pendingReviewCount.useQuery(undefined, {
+    refetchInterval: 30_000,
+    enabled: !!user && user.role === "admin",
+  });
+  const pendingReviewCount = pendingData?.count ?? 0;
 
   if (loading) {
     return (
@@ -89,6 +97,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     );
   }
 
+  // 根據 badgeKey 取得對應的徽章數量
+  const getBadgeCount = (badgeKey?: string): number => {
+    if (badgeKey === "pendingReview") return pendingReviewCount;
+    return 0;
+  };
+
   return (
     <div className="min-h-screen bg-background flex">
       {/* Sidebar */}
@@ -108,6 +122,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 <div className="space-y-0.5">
                   {group.items.map(item => {
                     const isActive = location === item.path || (item.path !== "/admin" && location.startsWith(item.path));
+                    const badgeCount = getBadgeCount((item as any).badgeKey);
                     return (
                       <button
                         key={item.path}
@@ -119,7 +134,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                         }`}
                       >
                         <item.icon className="h-4 w-4 shrink-0" />
-                        {item.label}
+                        <span className="flex-1 text-left">{item.label}</span>
+                        {badgeCount > 0 && (
+                          <span className="inline-flex items-center justify-center min-w-5 h-5 px-1.5 text-[11px] font-bold text-white bg-red-500 rounded-full animate-in fade-in">
+                            {badgeCount > 99 ? "99+" : badgeCount}
+                          </span>
+                        )}
                       </button>
                     );
                   })}

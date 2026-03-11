@@ -433,6 +433,13 @@ export async function getOrdersWithPendingReview(page = 1, limit = 20) {
   return { items, total: countResult[0]?.count ?? 0 };
 }
 
+export async function getPendingReviewCount(): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+  const result = await db.select({ count: sql<number>`count(*)` }).from(orders).where(eq(orders.reviewStatus, "pending_review"));
+  return result[0]?.count ?? 0;
+}
+
 // ─── Enrollments ───
 export async function createEnrollment(data: InsertEnrollment) {
   const db = await getDb();
