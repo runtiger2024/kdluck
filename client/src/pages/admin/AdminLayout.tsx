@@ -4,19 +4,52 @@ import { Button } from "@/components/ui/button";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { getLoginUrl } from "@/const";
 import {
-  LayoutDashboard, BookOpen, ShoppingCart, Users, Ticket, Settings, LogOut, BarChart3, ArrowLeft,
+  LayoutDashboard, BookOpen, ShoppingCart, Users, Ticket, Settings, LogOut,
+  ArrowLeft, CreditCard, FileText, Star, GraduationCap, FolderOpen, MessageSquare,
 } from "lucide-react";
 import { useLocation } from "wouter";
 
-const menuItems = [
-  { icon: LayoutDashboard, label: "數據中心", path: "/admin" },
-  { icon: BookOpen, label: "課程管理", path: "/admin/courses" },
-  { icon: ShoppingCart, label: "訂單管理", path: "/admin/orders" },
-  { icon: Users, label: "用戶管理", path: "/admin/users" },
-  { icon: Ticket, label: "優惠券", path: "/admin/coupons" },
-  { icon: Settings, label: "系統設定", path: "/admin/settings" },
+const menuGroups = [
+  {
+    label: "總覽",
+    items: [
+      { icon: LayoutDashboard, label: "數據中心", path: "/admin" },
+    ],
+  },
+  {
+    label: "內容管理",
+    items: [
+      { icon: BookOpen, label: "課程管理", path: "/admin/courses" },
+      { icon: FolderOpen, label: "分類管理", path: "/admin/categories" },
+      { icon: GraduationCap, label: "講師管理", path: "/admin/instructors" },
+      { icon: Star, label: "評價管理", path: "/admin/reviews" },
+    ],
+  },
+  {
+    label: "交易管理",
+    items: [
+      { icon: ShoppingCart, label: "訂單管理", path: "/admin/orders" },
+      { icon: CreditCard, label: "支付設定", path: "/admin/payment" },
+      { icon: FileText, label: "發票管理", path: "/admin/invoices" },
+      { icon: Ticket, label: "優惠券", path: "/admin/coupons" },
+    ],
+  },
+  {
+    label: "用戶與通知",
+    items: [
+      { icon: Users, label: "用戶管理", path: "/admin/users" },
+      { icon: MessageSquare, label: "LINE 推播", path: "/admin/line-push" },
+    ],
+  },
+  {
+    label: "系統",
+    items: [
+      { icon: Settings, label: "系統設定", path: "/admin/settings" },
+    ],
+  },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -63,25 +96,36 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <span className="text-xs text-muted-foreground ml-2">管理後台</span>
         </div>
 
-        <nav className="flex-1 p-3 space-y-1">
-          {menuItems.map(item => {
-            const isActive = location === item.path || (item.path !== "/admin" && location.startsWith(item.path));
-            return (
-              <button
-                key={item.path}
-                onClick={() => setLocation(item.path)}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
-                  isActive
-                    ? "bg-sidebar-accent text-sidebar-primary font-medium"
-                    : "text-sidebar-foreground hover:bg-sidebar-accent/50"
-                }`}
-              >
-                <item.icon className="h-4 w-4" />
-                {item.label}
-              </button>
-            );
-          })}
-        </nav>
+        <ScrollArea className="flex-1">
+          <nav className="p-3 space-y-4">
+            {menuGroups.map(group => (
+              <div key={group.label}>
+                <p className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+                  {group.label}
+                </p>
+                <div className="space-y-0.5">
+                  {group.items.map(item => {
+                    const isActive = location === item.path || (item.path !== "/admin" && location.startsWith(item.path));
+                    return (
+                      <button
+                        key={item.path}
+                        onClick={() => setLocation(item.path)}
+                        className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                          isActive
+                            ? "bg-sidebar-accent text-sidebar-primary font-medium"
+                            : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+                        }`}
+                      >
+                        <item.icon className="h-4 w-4 shrink-0" />
+                        {item.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </nav>
+        </ScrollArea>
 
         <div className="p-3 border-t border-sidebar-border">
           <button

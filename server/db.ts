@@ -14,6 +14,8 @@ import {
   coupons, InsertCoupon,
   siteConfig, InsertSiteConfig,
   notificationTemplates, InsertNotificationTemplate,
+  invoices, InsertInvoice,
+  linePushHistory, InsertLinePushHistory,
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -522,5 +524,106 @@ export async function getCategoryById(id: number) {
   const db = await getDb();
   if (!db) return undefined;
   const result = await db.select().from(categories).where(eq(categories.id, id)).limit(1);
+  return result[0];
+}
+
+// ─── Invoices (光貿電子發票) ───
+export async function createInvoice(data: InsertInvoice) {
+  const db = await getDb();
+  if (!db) return;
+  const result = await db.insert(invoices).values(data);
+  return result[0].insertId;
+}
+
+export async function getInvoiceByOrderNo(orderNo: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(invoices).where(eq(invoices.orderNo, orderNo)).limit(1);
+  return result[0];
+}
+
+export async function getInvoiceById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(invoices).where(eq(invoices.id, id)).limit(1);
+  return result[0];
+}
+
+export async function updateInvoice(id: number, data: Partial<InsertInvoice> & { status?: string; invoiceNumber?: string; invoiceDate?: string; randomNumber?: string; rawResponse?: string; errorMessage?: string }) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(invoices).set(data as any).where(eq(invoices.id, id));
+}
+
+export async function getAllInvoices(page = 1, limit = 20, status?: string) {
+  const db = await getDb();
+  if (!db) return { items: [], total: 0 };
+  const offset = (page - 1) * limit;
+  const conditions: any[] = [];
+  if (status && status !== "all") conditions.push(eq(invoices.status, status as any));
+  const where = conditions.length > 0 ? and(...conditions) : undefined;
+  const [items, countResult] = await Promise.all([
+    db.select().from(invoices).where(where).orderBy(desc(invoices.createdAt)).limit(limit).offset(offset),
+    db.select({ count: sql<number>`count(*)` }).from(invoices).where(where),
+  ]);
+  return { items, total: countResult[0]?.count ?? 0 };
+}
+
+// ─── LINE Push History ───
+export async function createLinePush(data: InsertLinePushHistory) {
+  const db = await getDb();
+  if (!db) return;
+  const result = await db.insert(linePushHistory).values(data);
+  return result[0].insertId;
+}
+
+export async function updateLinePush(id: number, data: Partial<InsertLinePushHistory> & { status?: string; sentCount?: number; errorMessage?: string; sentAt?: Date }) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(linePushHistory).set(data as any).where(eq(linePushHistory.id, id));
+}
+
+export async function getLinePushHistory(page = 1, limit = 20) {
+  const db = await getDb();
+  if (!db) return { items: [], total: 0 };
+  const offset = (page - 1) * limit;
+  const [items, countResult] = await Promise.all([
+    db.select().from(linePushHistory).orderBy(desc(linePushHistory.createdAt)).limit(limit).offset(offset),
+    db.select({ count: sql<number>`count(*)` }).from(linePushHistory),
+  ]);
+  return { items, total: countResult[0]?.count ?? 0 };
+}
+
+// ─── Reviews (Admin) ───
+export async function getAllReviews(page = 1, limit = 20) {
+  const db = await getDb();
+  if (!db) return { items: [], total: 0 };
+  const offset = (page - 1) * limit;
+  const [items, countResult] = await Promise.all([
+    db.select().from(reviews).orderBy(desc(reviews.createdAt)).limit(limit).offset(offset),
+    db.select({ count: sql<number>`count(*)` }).from(reviews),
+  ]);
+  return { items, total: countResult[0]?.count ?? 0 };
+}
+
+export async function deleteReview(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(reviews).where(eq(reviews.id, id));
+}
+
+// ─── Users with LINE ───
+export async function getUsersWithLineId() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({ id: users.id, name: users.name, lineUserId: users.lineUserId })
+    .from(users)
+    .where(sql`lineUserId IS NOT NULL AND lineUserId != ''`);
+}
+
+export async function getUserById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
   return result[0];
 }

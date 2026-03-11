@@ -30,6 +30,12 @@ import AdminOrders from "./pages/admin/AdminOrders";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminCoupons from "./pages/admin/AdminCoupons";
 import AdminSettings from "./pages/admin/AdminSettings";
+import AdminPayment from "./pages/admin/AdminPayment";
+import AdminInvoices from "./pages/admin/AdminInvoices";
+import AdminReviews from "./pages/admin/AdminReviews";
+import AdminCategories from "./pages/admin/AdminCategories";
+import AdminInstructors from "./pages/admin/AdminInstructors";
+import AdminLinePush from "./pages/admin/AdminLinePush";
 
 function Router() {
   return (
@@ -67,16 +73,34 @@ function Router() {
         <AdminLayout><AdminCourses /></AdminLayout>
       </Route>
       <Route path="/admin/courses/:courseId/content">
-        {(params) => <AdminLayout><AdminCourseContent /></AdminLayout>}
+        {() => <AdminLayout><AdminCourseContent /></AdminLayout>}
+      </Route>
+      <Route path="/admin/categories">
+        <AdminLayout><AdminCategories /></AdminLayout>
+      </Route>
+      <Route path="/admin/instructors">
+        <AdminLayout><AdminInstructors /></AdminLayout>
+      </Route>
+      <Route path="/admin/reviews">
+        <AdminLayout><AdminReviews /></AdminLayout>
       </Route>
       <Route path="/admin/orders">
         <AdminLayout><AdminOrders /></AdminLayout>
       </Route>
-      <Route path="/admin/users">
-        <AdminLayout><AdminUsers /></AdminLayout>
+      <Route path="/admin/payment">
+        <AdminLayout><AdminPayment /></AdminLayout>
+      </Route>
+      <Route path="/admin/invoices">
+        <AdminLayout><AdminInvoices /></AdminLayout>
       </Route>
       <Route path="/admin/coupons">
         <AdminLayout><AdminCoupons /></AdminLayout>
+      </Route>
+      <Route path="/admin/users">
+        <AdminLayout><AdminUsers /></AdminLayout>
+      </Route>
+      <Route path="/admin/line-push">
+        <AdminLayout><AdminLinePush /></AdminLayout>
       </Route>
       <Route path="/admin/settings">
         <AdminLayout><AdminSettings /></AdminLayout>

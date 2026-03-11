@@ -8,6 +8,7 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { registerECPayRoutes } from "../ecpayRoutes";
+import { registerLineRoutes } from "../lineRoutes";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -38,6 +39,8 @@ async function startServer() {
   registerOAuthRoutes(app);
   // ECPay webhook & payment routes
   registerECPayRoutes(app);
+  // LINE Login routes
+  registerLineRoutes(app);
   // tRPC API
   app.use(
     "/api/trpc",

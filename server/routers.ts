@@ -8,6 +8,8 @@ import { nanoid } from "nanoid";
 import * as db from "./db";
 import { storagePut, storageGet } from "./storage";
 import { invokeLLM } from "./_core/llm";
+import { issueInvoice, voidInvoice } from "./amego";
+import { pushMessage, multicastMessage, broadcastMessage } from "./line";
 
 // ─── Auth Router ───
 const authRouter = router({
@@ -616,6 +618,183 @@ const recommendRouter = router({
   }),
 });
 
+// ─── Invoice Router (光貿電子發票) ───
+const invoiceRouter = router({
+  all: adminProcedure.input(z.object({
+    page: z.number().optional(),
+    limit: z.number().optional(),
+    status: z.string().optional(),
+  }).optional()).query(async ({ input }) => {
+    return db.getAllInvoices(input?.page, input?.limit, input?.status);
+  }),
+  getByOrderNo: adminProcedure.input(z.object({ orderNo: z.string() })).query(async ({ input }) => {
+    return db.getInvoiceByOrderNo(input.orderNo);
+  }),
+  issue: adminProcedure.input(z.object({
+    orderId: z.number(),
+    orderNo: z.string(),
+    buyerIdentifier: z.string().optional(),
+    buyerName: z.string().optional(),
+    buyerEmail: z.string().optional(),
+    carrierType: z.string().optional(),
+    carrierId: z.string().optional(),
+    npoban: z.string().optional(),
+    itemName: z.string(),
+    amount: z.number(),
+  })).mutation(async ({ input }) => {
+    // Create invoice record
+    const invoiceId = await db.createInvoice({
+      orderId: input.orderId,
+      orderNo: input.orderNo,
+      buyerIdentifier: input.buyerIdentifier || "0000000000",
+      buyerName: input.buyerName || "消費者",
+      buyerEmail: input.buyerEmail,
+      carrierType: input.carrierType,
+      carrierId: input.carrierId,
+      npoban: input.npoban,
+      amount: input.amount.toFixed(2),
+      taxAmount: "0.00",
+      totalAmount: input.amount.toFixed(2),
+    });
+
+    try {
+      const result = await issueInvoice({
+        orderId: input.orderNo,
+        buyerIdentifier: input.buyerIdentifier,
+        buyerName: input.buyerName,
+        buyerEmail: input.buyerEmail,
+        carrierType: input.carrierType,
+        carrierId1: input.carrierId,
+        carrierId2: input.carrierId,
+        npoban: input.npoban,
+        items: [{ name: input.itemName, quantity: 1, unitPrice: input.amount, amount: input.amount }],
+        totalAmount: input.amount,
+      });
+
+      if (result && result.Status === "Success") {
+        await db.updateInvoice(invoiceId!, {
+          status: "issued",
+          invoiceNumber: result.InvoiceNumber,
+          invoiceDate: result.InvoiceDate,
+          randomNumber: result.RandomNumber,
+          rawResponse: JSON.stringify(result),
+        });
+        return { success: true, invoiceNumber: result.InvoiceNumber };
+      } else {
+        await db.updateInvoice(invoiceId!, {
+          status: "failed",
+          errorMessage: result?.Message || "開立失敗",
+          rawResponse: JSON.stringify(result),
+        });
+        return { success: false, error: result?.Message || "開立失敗" };
+      }
+    } catch (error: any) {
+      await db.updateInvoice(invoiceId!, {
+        status: "failed",
+        errorMessage: error.message,
+      });
+      return { success: false, error: error.message };
+    }
+  }),
+  void: adminProcedure.input(z.object({
+    id: z.number(),
+    invoiceNumber: z.string(),
+    invoiceDate: z.string(),
+    reason: z.string().optional(),
+  })).mutation(async ({ input }) => {
+    try {
+      const result = await voidInvoice(input.invoiceNumber, input.invoiceDate, input.reason);
+      if (result && result.Status === "Success") {
+        await db.updateInvoice(input.id, { status: "voided", rawResponse: JSON.stringify(result) });
+        return { success: true };
+      } else {
+        return { success: false, error: result?.Message || "作廢失敗" };
+      }
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
+  }),
+});
+
+// ─── LINE Push Router ───
+const linePushRouter = router({
+  history: adminProcedure.input(z.object({
+    page: z.number().optional(),
+    limit: z.number().optional(),
+  }).optional()).query(async ({ input }) => {
+    return db.getLinePushHistory(input?.page, input?.limit);
+  }),
+  send: adminProcedure.input(z.object({
+    targetType: z.enum(["all", "user", "enrolled"]),
+    targetUserId: z.number().optional(),
+    messageContent: z.string().min(1),
+    templateKey: z.string().optional(),
+  })).mutation(async ({ input }) => {
+    const pushId = await db.createLinePush({
+      templateKey: input.templateKey,
+      targetType: input.targetType,
+      targetUserId: input.targetUserId,
+      messageContent: input.messageContent,
+    });
+
+    try {
+      let result: { success: number; failed: number } = { success: 0, failed: 0 };
+
+      if (input.targetType === "all") {
+        const ok = await broadcastMessage(input.messageContent);
+        result = ok ? { success: 1, failed: 0 } : { success: 0, failed: 1 };
+      } else if (input.targetType === "user" && input.targetUserId) {
+        const user = await db.getUserById(input.targetUserId);
+        if (user?.lineUserId) {
+          const ok = await pushMessage(user.lineUserId, input.messageContent);
+          result = ok ? { success: 1, failed: 0 } : { success: 0, failed: 1 };
+        } else {
+          result = { success: 0, failed: 1 };
+        }
+      } else if (input.targetType === "enrolled") {
+        const lineUsers = await db.getUsersWithLineId();
+        const lineIds = lineUsers.map(u => u.lineUserId!).filter(Boolean);
+        if (lineIds.length > 0) {
+          result = await multicastMessage(lineIds, input.messageContent);
+        }
+      }
+
+      await db.updateLinePush(pushId!, {
+        status: result.success > 0 ? "sent" : "failed",
+        sentCount: result.success,
+        sentAt: new Date(),
+        errorMessage: result.failed > 0 ? `${result.failed} 筆發送失敗` : undefined,
+      });
+
+      return { success: true, sentCount: result.success, failedCount: result.failed };
+    } catch (error: any) {
+      await db.updateLinePush(pushId!, {
+        status: "failed",
+        errorMessage: error.message,
+      });
+      return { success: false, error: error.message };
+    }
+  }),
+  // Get users with LINE ID for targeted push
+  lineUsers: adminProcedure.query(async () => {
+    return db.getUsersWithLineId();
+  }),
+});
+
+// ─── Review Admin Router ───
+const reviewAdminRouter = router({
+  all: adminProcedure.input(z.object({
+    page: z.number().optional(),
+    limit: z.number().optional(),
+  }).optional()).query(async ({ input }) => {
+    return db.getAllReviews(input?.page, input?.limit);
+  }),
+  delete: adminProcedure.input(z.object({ id: z.number() })).mutation(async ({ input }) => {
+    await db.deleteReview(input.id);
+    return { success: true };
+  }),
+});
+
 // ─── Main Router ───
 export const appRouter = router({
   system: systemRouter,
@@ -636,6 +815,9 @@ export const appRouter = router({
   analytics: analyticsRouter,
   upload: uploadRouter,
   recommend: recommendRouter,
+  invoice: invoiceRouter,
+  linePush: linePushRouter,
+  reviewAdmin: reviewAdminRouter,
 });
 
 export type AppRouter = typeof appRouter;

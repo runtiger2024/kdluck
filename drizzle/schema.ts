@@ -208,3 +208,47 @@ export const notificationTemplates = mysqlTable("notification_templates", {
 
 export type NotificationTemplate = typeof notificationTemplates.$inferSelect;
 export type InsertNotificationTemplate = typeof notificationTemplates.$inferInsert;
+
+// ─── Invoices (光貿電子發票) ───
+export const invoices = mysqlTable("invoices", {
+  id: int("id").autoincrement().primaryKey(),
+  orderId: int("orderId").notNull(),
+  orderNo: varchar("orderNo", { length: 64 }).notNull(),
+  invoiceNumber: varchar("invoiceNumber", { length: 20 }), // 發票號碼 (光貿回傳)
+  invoiceDate: varchar("invoiceDate", { length: 20 }), // 發票日期
+  randomNumber: varchar("randomNumber", { length: 10 }), // 隨機碼
+  buyerIdentifier: varchar("buyerIdentifier", { length: 10 }).default("0000000000").notNull(), // 買方統編
+  buyerName: varchar("buyerName", { length: 128 }).default("消費者").notNull(),
+  buyerEmail: varchar("buyerEmail", { length: 320 }),
+  carrierType: varchar("carrierType", { length: 20 }), // 載具類別
+  carrierId: varchar("carrierId", { length: 128 }), // 載具號碼
+  npoban: varchar("npoban", { length: 10 }), // 捐贈碼
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  taxAmount: decimal("taxAmount", { precision: 10, scale: 2 }).default("0.00").notNull(),
+  totalAmount: decimal("totalAmount", { precision: 10, scale: 2 }).notNull(),
+  status: mysqlEnum("status", ["pending", "issued", "voided", "failed"]).default("pending").notNull(),
+  errorMessage: text("errorMessage"),
+  rawResponse: text("rawResponse"), // 光貿原始回傳 JSON
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Invoice = typeof invoices.$inferSelect;
+export type InsertInvoice = typeof invoices.$inferInsert;
+
+// ─── LINE Push History ───
+export const linePushHistory = mysqlTable("line_push_history", {
+  id: int("id").autoincrement().primaryKey(),
+  templateKey: varchar("templateKey", { length: 128 }),
+  targetType: mysqlEnum("targetType", ["all", "user", "enrolled"]).default("all").notNull(),
+  targetUserId: int("targetUserId"),
+  messageContent: text("messageContent").notNull(),
+  sentCount: int("sentCount").default(0).notNull(),
+  status: mysqlEnum("status", ["pending", "sent", "failed"]).default("pending").notNull(),
+  errorMessage: text("errorMessage"),
+  sentAt: timestamp("sentAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type LinePushHistory = typeof linePushHistory.$inferSelect;
+export type InsertLinePushHistory = typeof linePushHistory.$inferInsert;

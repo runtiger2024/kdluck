@@ -12,4 +12,12 @@ export const ENV = {
   ecpayHashKey: process.env.ECPAY_HASH_KEY ?? "",
   ecpayHashIv: process.env.ECPAY_HASH_IV ?? "",
   ecpayIsProduction: process.env.ECPAY_IS_PRODUCTION === "true",
+  // 光貿電子發票
+  amegoInvoiceNumber: process.env.AMEGO_INVOICE_NUMBER ?? "",
+  amegoAppKey: process.env.AMEGO_APP_KEY ?? "",
+  // LINE Login
+  lineChannelId: process.env.LINE_CHANNEL_ID ?? "",
+  lineChannelSecret: process.env.LINE_CHANNEL_SECRET ?? "",
+  // LINE Messaging API
+  lineMessagingToken: process.env.LINE_MESSAGING_TOKEN ?? "",
 };

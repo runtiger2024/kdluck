@@ -123,6 +123,18 @@ vi.mock("./db", () => {
     getMonthlySales: vi.fn().mockResolvedValue([{ month: "2026-03", revenue: 5000, orderCount: 3 }]),
     getUserGrowth: vi.fn().mockResolvedValue([{ month: "2026-03", userCount: 15 }]),
     getCategoryById: vi.fn().mockImplementation((id: number) => Promise.resolve(mockCategories.find(c => c.id === id))),
+    createInvoice: vi.fn().mockResolvedValue(1),
+    getInvoiceByOrderNo: vi.fn().mockResolvedValue(null),
+    getInvoiceById: vi.fn().mockResolvedValue(null),
+    updateInvoice: vi.fn(),
+    getAllInvoices: vi.fn().mockResolvedValue({ items: [], total: 0 }),
+    createLinePush: vi.fn().mockResolvedValue(1),
+    updateLinePush: vi.fn(),
+    getLinePushHistory: vi.fn().mockResolvedValue({ items: [], total: 0 }),
+    getAllReviews: vi.fn().mockResolvedValue({ items: mockReviews, total: 0 }),
+    deleteReview: vi.fn(),
+    getUsersWithLineId: vi.fn().mockResolvedValue([]),
+    getUserById: vi.fn().mockImplementation((id: number) => Promise.resolve(id === 1 ? { id: 1, name: "Test", lineUserId: "U123" } : null)),
   };
 });
 
@@ -130,6 +142,19 @@ vi.mock("./db", () => {
 vi.mock("./storage", () => ({
   storagePut: vi.fn().mockResolvedValue({ key: "test/file.mp4", url: "https://cdn.example.com/test/file.mp4" }),
   storageGet: vi.fn().mockResolvedValue({ key: "videos/1.mp4", url: "https://cdn.example.com/signed/videos/1.mp4" }),
+}));
+
+// Mock amego (invoice)
+vi.mock("./amego", () => ({
+  issueInvoice: vi.fn().mockResolvedValue({ Status: "Success", InvoiceNumber: "AB12345678", InvoiceDate: "2026-03-11", RandomNumber: "1234" }),
+  voidInvoice: vi.fn().mockResolvedValue({ Status: "Success" }),
+}));
+
+// Mock line
+vi.mock("./line", () => ({
+  pushMessage: vi.fn().mockResolvedValue(true),
+  multicastMessage: vi.fn().mockResolvedValue({ success: 1, failed: 0 }),
+  broadcastMessage: vi.fn().mockResolvedValue(true),
 }));
 
 // Mock LLM
@@ -625,5 +650,156 @@ describe("Protected API - LLM Recommendations", () => {
     const result = await caller.recommend.getCourseRecommendations();
     expect(result).toHaveProperty("recommendations");
     expect(result).toHaveProperty("reason");
+  });
+});
+
+// ─── Invoice Tests ───
+describe("Admin API - Invoice Management", () => {
+  it("lists all invoices", async () => {
+    const caller = appRouter.createCaller(createAdminContext());
+    const result = await caller.invoice.all({});
+    expect(result).toHaveProperty("items");
+    expect(result).toHaveProperty("total");
+  });
+
+  it("gets invoice by order number", async () => {
+    const caller = appRouter.createCaller(createAdminContext());
+    const result = await caller.invoice.getByOrderNo({ orderNo: "KD123456" });
+    // Returns null since mock returns null
+    expect(result).toBeNull();
+  });
+
+  it("issues an invoice", async () => {
+    const caller = appRouter.createCaller(createAdminContext());
+    const result = await caller.invoice.issue({
+      orderId: 1,
+      orderNo: "KD123456",
+      buyerName: "測試用戶",
+      buyerEmail: "test@example.com",
+      itemName: "React 入門課程",
+      amount: 1990,
+    });
+    expect(result.success).toBe(true);
+    expect(result.invoiceNumber).toBe("AB12345678");
+  });
+
+  it("voids an invoice", async () => {
+    const caller = appRouter.createCaller(createAdminContext());
+    const result = await caller.invoice.void({
+      id: 1,
+      invoiceNumber: "AB12345678",
+      invoiceDate: "2026-03-11",
+      reason: "客戶退款",
+    });
+    expect(result.success).toBe(true);
+  });
+});
+
+// ─── LINE Push Tests ───
+describe("Admin API - LINE Push", () => {
+  it("lists push history", async () => {
+    const caller = appRouter.createCaller(createAdminContext());
+    const result = await caller.linePush.history({});
+    expect(result).toHaveProperty("items");
+    expect(result).toHaveProperty("total");
+  });
+
+  it("sends broadcast push", async () => {
+    const caller = appRouter.createCaller(createAdminContext());
+    const result = await caller.linePush.send({
+      targetType: "all",
+      messageContent: "新課程上架通知！",
+    });
+    expect(result.success).toBe(true);
+    expect(result.sentCount).toBe(1);
+  });
+
+  it("sends push to specific user", async () => {
+    const caller = appRouter.createCaller(createAdminContext());
+    const result = await caller.linePush.send({
+      targetType: "user",
+      targetUserId: 1,
+      messageContent: "您的課程已開通！",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("lists LINE users", async () => {
+    const caller = appRouter.createCaller(createAdminContext());
+    const result = await caller.linePush.lineUsers();
+    expect(Array.isArray(result)).toBe(true);
+  });
+});
+
+// ─── Review Admin Tests ───
+describe("Admin API - Review Management", () => {
+  it("lists all reviews", async () => {
+    const caller = appRouter.createCaller(createAdminContext());
+    const result = await caller.reviewAdmin.all({});
+    expect(result).toHaveProperty("items");
+    expect(result).toHaveProperty("total");
+  });
+
+  it("deletes a review", async () => {
+    const caller = appRouter.createCaller(createAdminContext());
+    const result = await caller.reviewAdmin.delete({ id: 1 });
+    expect(result.success).toBe(true);
+  });
+});
+
+// ─── Instructor CRUD Tests ───
+describe("Admin API - Instructor Management", () => {
+  it("lists all instructors", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    const result = await caller.instructor.list();
+    expect(result).toHaveLength(1);
+    expect(result[0].name).toBe("王老師");
+  });
+
+  it("creates an instructor", async () => {
+    const caller = appRouter.createCaller(createAdminContext());
+    const result = await caller.instructor.create({
+      name: "新講師",
+      title: "AI 專家",
+      bio: "專精 AI 領域",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("updates an instructor", async () => {
+    const caller = appRouter.createCaller(createAdminContext());
+    const result = await caller.instructor.update({ id: 1, name: "更新名稱" });
+    expect(result.success).toBe(true);
+  });
+
+  it("deletes an instructor", async () => {
+    const caller = appRouter.createCaller(createAdminContext());
+    const result = await caller.instructor.delete({ id: 1 });
+    expect(result.success).toBe(true);
+  });
+});
+
+// ─── Category CRUD Tests ───
+describe("Admin API - Category Management", () => {
+  it("creates a category", async () => {
+    const caller = appRouter.createCaller(createAdminContext());
+    const result = await caller.category.create({
+      name: "AI 人工智慧",
+      slug: "ai",
+      description: "AI 相關課程",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("updates a category", async () => {
+    const caller = appRouter.createCaller(createAdminContext());
+    const result = await caller.category.update({ id: 1, name: "前端開發 v2" });
+    expect(result.success).toBe(true);
+  });
+
+  it("deletes a category", async () => {
+    const caller = appRouter.createCaller(createAdminContext());
+    const result = await caller.category.delete({ id: 1 });
+    expect(result.success).toBe(true);
   });
 });

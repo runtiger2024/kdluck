@@ -15,6 +15,13 @@
       "when": 1773213983047,
       "tag": "0001_secret_sway",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1773217471901,
+      "tag": "0002_safe_triathlon",
+      "breakpoints": true
     }
   ]
 }
