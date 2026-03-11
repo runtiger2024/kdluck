@@ -21,6 +21,8 @@ import {
   courseFaqs, InsertCourseFaq,
   courseNotes, InsertCourseNote,
   certificates, InsertCertificate,
+  notifications, InsertNotification,
+  notificationLogs, InsertNotificationLog,
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -916,4 +918,97 @@ export async function updateCertificate(id: number, data: Partial<InsertCertific
   const db = await getDb();
   if (!db) return;
   await db.update(certificates).set(data).where(eq(certificates.id, id));
+}
+
+// ─── Notifications (站內通知) ───
+export async function getUserNotifications(userId: number, page = 1, limit = 20) {
+  const db = await getDb();
+  if (!db) return { items: [], total: 0, unreadCount: 0 };
+  const offset = (page - 1) * limit;
+  const [items, countResult, unreadResult] = await Promise.all([
+    db.select().from(notifications).where(eq(notifications.userId, userId)).orderBy(desc(notifications.createdAt)).limit(limit).offset(offset),
+    db.select({ count: sql<number>`count(*)` }).from(notifications).where(eq(notifications.userId, userId)),
+    db.select({ count: sql<number>`count(*)` }).from(notifications).where(and(eq(notifications.userId, userId), eq(notifications.isRead, false))),
+  ]);
+  return { items, total: countResult[0]?.count ?? 0, unreadCount: unreadResult[0]?.count ?? 0 };
+}
+
+export async function getUnreadNotificationCount(userId: number) {
+  const db = await getDb();
+  if (!db) return 0;
+  const result = await db.select({ count: sql<number>`count(*)` }).from(notifications).where(and(eq(notifications.userId, userId), eq(notifications.isRead, false)));
+  return result[0]?.count ?? 0;
+}
+
+export async function createNotification(data: InsertNotification) {
+  const db = await getDb();
+  if (!db) return;
+  const result = await db.insert(notifications).values(data);
+  return result[0].insertId;
+}
+
+export async function createNotificationBatch(dataList: InsertNotification[]) {
+  const db = await getDb();
+  if (!db) return;
+  if (dataList.length === 0) return;
+  await db.insert(notifications).values(dataList);
+}
+
+export async function markNotificationRead(id: number, userId: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(notifications).set({ isRead: true }).where(and(eq(notifications.id, id), eq(notifications.userId, userId)));
+}
+
+export async function markAllNotificationsRead(userId: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(notifications).set({ isRead: true }).where(and(eq(notifications.userId, userId), eq(notifications.isRead, false)));
+}
+
+export async function deleteNotification(id: number, userId: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(notifications).where(and(eq(notifications.id, id), eq(notifications.userId, userId)));
+}
+
+// ─── Notification Logs (通知發送記錄) ───
+export async function createNotificationLog(data: InsertNotificationLog) {
+  const db = await getDb();
+  if (!db) return;
+  const result = await db.insert(notificationLogs).values(data);
+  return result[0].insertId;
+}
+
+export async function updateNotificationLog(id: number, data: Partial<InsertNotificationLog> & { status?: string; sentCount?: number; errorMessage?: string; sentAt?: Date }) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(notificationLogs).set(data as any).where(eq(notificationLogs.id, id));
+}
+
+export async function getNotificationLogs(page = 1, limit = 20) {
+  const db = await getDb();
+  if (!db) return { items: [], total: 0 };
+  const offset = (page - 1) * limit;
+  const [items, countResult] = await Promise.all([
+    db.select().from(notificationLogs).orderBy(desc(notificationLogs.createdAt)).limit(limit).offset(offset),
+    db.select({ count: sql<number>`count(*)` }).from(notificationLogs),
+  ]);
+  return { items, total: countResult[0]?.count ?? 0 };
+}
+
+// ─── 取得所有用戶（用於批量通知） ───
+export async function getAllUserIds() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({ id: users.id, email: users.email, lineUserId: users.lineUserId }).from(users);
+}
+
+export async function getEnrolledUserIds(courseId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({ id: users.id, email: users.email, lineUserId: users.lineUserId })
+    .from(users)
+    .innerJoin(enrollments, eq(users.id, enrollments.userId))
+    .where(eq(enrollments.courseId, courseId));
 }

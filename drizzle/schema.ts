@@ -345,3 +345,38 @@ export const certificates = mysqlTable("certificates", {
 
 export type Certificate = typeof certificates.$inferSelect;
 export type InsertCertificate = typeof certificates.$inferInsert;
+
+// ─── Notifications (站內通知) ───
+export const notifications = mysqlTable("notifications", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  title: varchar("title", { length: 256 }).notNull(),
+  content: text("content").notNull(),
+  type: mysqlEnum("type", ["system", "order", "course", "promotion", "review", "certificate"]).default("system").notNull(),
+  isRead: boolean("isRead").default(false).notNull(),
+  link: varchar("link", { length: 512 }), // 點擊跳轉連結
+  metadata: json("metadata"), // 額外資料（orderId, courseId 等）
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type Notification = typeof notifications.$inferSelect;
+export type InsertNotification = typeof notifications.$inferInsert;
+
+// ─── Notification Logs (通知發送記錄) ───
+export const notificationLogs = mysqlTable("notification_logs", {
+  id: int("id").autoincrement().primaryKey(),
+  channel: mysqlEnum("channel", ["in_app", "line", "email"]).notNull(),
+  targetType: mysqlEnum("targetType", ["all", "user", "enrolled"]).default("all").notNull(),
+  targetUserId: int("targetUserId"), // null = 全部用戶
+  title: varchar("title", { length: 256 }).notNull(),
+  content: text("content").notNull(),
+  sentCount: int("sentCount").default(0).notNull(),
+  status: mysqlEnum("status", ["pending", "sent", "partial", "failed"]).default("pending").notNull(),
+  errorMessage: text("errorMessage"),
+  sentBy: int("sentBy"), // 發送者（管理員 ID）
+  sentAt: timestamp("sentAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type NotificationLog = typeof notificationLogs.$inferSelect;
+export type InsertNotificationLog = typeof notificationLogs.$inferInsert;

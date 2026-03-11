@@ -7,6 +7,7 @@ import {
 import { getLoginUrl } from "@/const";
 import { trpc } from "@/lib/trpc";
 import { BookOpen, User, ShoppingCart, LogOut, Settings, Menu, X, Sparkles } from "lucide-react";
+import NotificationBell from "@/components/NotificationBell";
 import { useLocation } from "wouter";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -59,6 +60,8 @@ export default function Navbar() {
           {loading ? (
             <div className="w-8 h-8 rounded-full bg-muted animate-pulse" />
           ) : user ? (
+            <>
+            <NotificationBell />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center gap-2 hover:opacity-80 transition-opacity">
@@ -95,6 +98,7 @@ export default function Navbar() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+            </>
           ) : (
             <div className="flex items-center gap-2">
               {/* LINE Login Button */}

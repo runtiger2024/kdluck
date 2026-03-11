@@ -8,7 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { getLoginUrl } from "@/const";
 import {
   LayoutDashboard, BookOpen, ShoppingCart, Users, Ticket, Settings, LogOut,
-  ArrowLeft, CreditCard, FileText, Star, GraduationCap, FolderOpen, MessageSquare, Megaphone,
+  ArrowLeft, CreditCard, FileText, Star, GraduationCap, FolderOpen, MessageSquare, Megaphone, Bell,
 } from "lucide-react";
 import { useLocation } from "wouter";
 
@@ -41,6 +41,7 @@ const menuGroups = [
     label: "用戶與通知",
     items: [
       { icon: Users, label: "用戶管理", path: "/admin/users" },
+      { icon: Bell, label: "通知推送", path: "/admin/notifications" },
       { icon: MessageSquare, label: "LINE 推播", path: "/admin/line-push" },
     ],
   },

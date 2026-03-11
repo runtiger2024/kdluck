@@ -183,6 +183,37 @@ vi.mock("./db", () => {
       lineChannelSecret: "test-channel-secret",
       lineMessagingToken: "test-messaging-token",
     }),
+    // Notification (站內通知)
+    getUserNotifications: vi.fn().mockResolvedValue({
+      items: [
+        { id: 1, userId: 1, title: "購買成功", content: "您已成功購買課程", type: "order", isRead: false, link: "/member/courses", metadata: null, createdAt: new Date() },
+        { id: 2, userId: 1, title: "新課程上架", content: "新課程已上架", type: "course", isRead: true, link: "/courses/1", metadata: null, createdAt: new Date() },
+      ],
+      total: 2,
+      unreadCount: 1,
+    }),
+    getUnreadNotificationCount: vi.fn().mockResolvedValue(1),
+    createNotification: vi.fn().mockResolvedValue(3),
+    createNotificationBatch: vi.fn(),
+    markNotificationRead: vi.fn(),
+    markAllNotificationsRead: vi.fn(),
+    deleteNotification: vi.fn(),
+    // Notification Logs
+    createNotificationLog: vi.fn().mockResolvedValue(1),
+    updateNotificationLog: vi.fn(),
+    getNotificationLogs: vi.fn().mockResolvedValue({
+      items: [
+        { id: 1, channel: "in_app", targetType: "all", targetUserId: null, title: "系統通知", content: "測試通知", sentCount: 5, status: "sent", errorMessage: null, sentBy: 99, sentAt: new Date(), createdAt: new Date() },
+      ],
+      total: 1,
+    }),
+    getAllUserIds: vi.fn().mockResolvedValue([
+      { id: 1, email: "test@example.com", lineUserId: "U123" },
+      { id: 2, email: "user2@example.com", lineUserId: null },
+    ]),
+    getEnrolledUserIds: vi.fn().mockResolvedValue([
+      { id: 1, email: "test@example.com", lineUserId: "U123" },
+    ]),
   };
 });
 
@@ -208,6 +239,27 @@ vi.mock("./line", () => ({
 // Mock certificate generator
 vi.mock("./certificateGenerator", () => ({
   generateCertificatePdf: vi.fn().mockResolvedValue({ url: "https://cdn.example.com/cert.pdf", key: "certs/test.pdf" }),
+}));
+
+// Mock notificationService
+vi.mock("./notificationService", () => ({
+  sendNotification: vi.fn().mockResolvedValue({
+    success: true,
+    results: [
+      { channel: "in_app", success: true, count: 2 },
+    ],
+  }),
+  notifyPurchaseSuccess: vi.fn().mockResolvedValue({ success: true, results: [] }),
+  notifyProofReviewResult: vi.fn().mockResolvedValue({ success: true, results: [] }),
+  notifyCertificateIssued: vi.fn().mockResolvedValue({ success: true, results: [] }),
+  notifyNewCourse: vi.fn().mockResolvedValue({ success: true, results: [] }),
+  notifyCouponExpiring: vi.fn().mockResolvedValue({ success: true, results: [] }),
+}));
+
+// Mock email
+vi.mock("./email", () => ({
+  sendEmail: vi.fn().mockResolvedValue({ success: true }),
+  buildEmailHtml: vi.fn().mockReturnValue("<html><body>Test Email</body></html>"),
 }));
 
 // Mock LLM
@@ -1419,6 +1471,207 @@ describe("Protected API - Certificate", () => {
     const caller = appRouter.createCaller(createPublicContext());
     await expect(
       caller.certificate.generate({ courseId: 1 })
+    ).rejects.toThrow();
+  });
+});
+
+// ─── In-App Notification Tests ───
+describe("In-App Notification - User", () => {
+  it("gets unread notification count", async () => {
+    const caller = appRouter.createCaller(createUserContext());
+    const result = await caller.inAppNotif.unreadCount();
+    expect(result).toBe(1);
+  });
+
+  it("lists user notifications with pagination", async () => {
+    const caller = appRouter.createCaller(createUserContext());
+    const result = await caller.inAppNotif.list({ page: 1, limit: 20 });
+    expect(result.items).toHaveLength(2);
+    expect(result.total).toBe(2);
+    expect(result.unreadCount).toBe(1);
+  });
+
+  it("lists user notifications with default params", async () => {
+    const caller = appRouter.createCaller(createUserContext());
+    const result = await caller.inAppNotif.list();
+    expect(result.items).toBeDefined();
+    expect(result.total).toBeDefined();
+  });
+
+  it("marks a single notification as read", async () => {
+    const caller = appRouter.createCaller(createUserContext());
+    const result = await caller.inAppNotif.markRead({ id: 1 });
+    expect(result.success).toBe(true);
+  });
+
+  it("marks all notifications as read", async () => {
+    const caller = appRouter.createCaller(createUserContext());
+    const result = await caller.inAppNotif.markAllRead();
+    expect(result.success).toBe(true);
+  });
+
+  it("deletes a notification", async () => {
+    const caller = appRouter.createCaller(createUserContext());
+    const result = await caller.inAppNotif.delete({ id: 1 });
+    expect(result.success).toBe(true);
+  });
+
+  it("denies anonymous access to notifications", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    await expect(caller.inAppNotif.unreadCount()).rejects.toThrow();
+  });
+
+  it("denies anonymous access to notification list", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    await expect(caller.inAppNotif.list()).rejects.toThrow();
+  });
+
+  it("denies anonymous access to mark read", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    await expect(caller.inAppNotif.markRead({ id: 1 })).rejects.toThrow();
+  });
+
+  it("denies anonymous access to delete notification", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    await expect(caller.inAppNotif.delete({ id: 1 })).rejects.toThrow();
+  });
+});
+
+// ─── Admin Notification Push Tests ───
+describe("Admin Notification Push", () => {
+  it("sends notification to all users via in_app channel", async () => {
+    const caller = appRouter.createCaller(createAdminContext());
+    const result = await caller.adminNotify.send({
+      channels: ["in_app"],
+      targetType: "all",
+      title: "系統維護通知",
+      content: "系統將於今晚 23:00 進行維護",
+      type: "system",
+    });
+    expect(result.success).toBe(true);
+    expect(result.results).toBeDefined();
+  });
+
+  it("sends notification to specific user", async () => {
+    const caller = appRouter.createCaller(createAdminContext());
+    const result = await caller.adminNotify.send({
+      channels: ["in_app"],
+      targetType: "user",
+      targetUserId: 1,
+      title: "訂單已處理",
+      content: "您的訂單已完成處理",
+      type: "order",
+      link: "/member/orders",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("sends notification via multiple channels", async () => {
+    const caller = appRouter.createCaller(createAdminContext());
+    const result = await caller.adminNotify.send({
+      channels: ["in_app", "line"],
+      targetType: "all",
+      title: "新課程上架",
+      content: "全新課程已上架，快來看看！",
+      type: "course",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("gets notification send logs", async () => {
+    const caller = appRouter.createCaller(createAdminContext());
+    const result = await caller.adminNotify.logs({ page: 1, limit: 20 });
+    expect(result.items).toHaveLength(1);
+    expect(result.total).toBe(1);
+    expect(result.items[0].channel).toBe("in_app");
+  });
+
+  it("gets notification logs with default params", async () => {
+    const caller = appRouter.createCaller(createAdminContext());
+    const result = await caller.adminNotify.logs();
+    expect(result.items).toBeDefined();
+  });
+
+  it("gets SMTP config", async () => {
+    const caller = appRouter.createCaller(createAdminContext());
+    const result = await caller.adminNotify.getSmtpConfig();
+    expect(result).toHaveProperty("smtp_host");
+    expect(result).toHaveProperty("smtp_port");
+    expect(result).toHaveProperty("smtp_user");
+  });
+
+  it("updates SMTP config", async () => {
+    const caller = appRouter.createCaller(createAdminContext());
+    const result = await caller.adminNotify.updateSmtpConfig({
+      smtp_host: "smtp.gmail.com",
+      smtp_port: "587",
+      smtp_secure: "false",
+      smtp_user: "test@gmail.com",
+      smtp_pass: "app-password",
+      smtp_from_name: "KDLuck",
+      smtp_from_email: "noreply@kdluck.com",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("updates SMTP config without overwriting masked password", async () => {
+    const caller = appRouter.createCaller(createAdminContext());
+    const result = await caller.adminNotify.updateSmtpConfig({
+      smtp_host: "smtp.gmail.com",
+      smtp_port: "587",
+      smtp_secure: "false",
+      smtp_user: "test@gmail.com",
+      smtp_pass: "******",
+      smtp_from_name: "KDLuck",
+      smtp_from_email: "noreply@kdluck.com",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("sends test email", async () => {
+    const caller = appRouter.createCaller(createAdminContext());
+    const result = await caller.adminNotify.testEmail({ to: "test@example.com" });
+    expect(result.success).toBe(true);
+  });
+
+  it("denies non-admin access to send notifications", async () => {
+    const caller = appRouter.createCaller(createUserContext());
+    await expect(
+      caller.adminNotify.send({
+        channels: ["in_app"],
+        targetType: "all",
+        title: "Test",
+        content: "Test content",
+      })
+    ).rejects.toThrow();
+  });
+
+  it("denies non-admin access to notification logs", async () => {
+    const caller = appRouter.createCaller(createUserContext());
+    await expect(caller.adminNotify.logs()).rejects.toThrow();
+  });
+
+  it("denies non-admin access to SMTP config", async () => {
+    const caller = appRouter.createCaller(createUserContext());
+    await expect(caller.adminNotify.getSmtpConfig()).rejects.toThrow();
+  });
+
+  it("denies non-admin access to test email", async () => {
+    const caller = appRouter.createCaller(createUserContext());
+    await expect(
+      caller.adminNotify.testEmail({ to: "test@example.com" })
+    ).rejects.toThrow();
+  });
+
+  it("denies anonymous access to send notifications", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    await expect(
+      caller.adminNotify.send({
+        channels: ["in_app"],
+        targetType: "all",
+        title: "Test",
+        content: "Test content",
+      })
     ).rejects.toThrow();
   });
 });

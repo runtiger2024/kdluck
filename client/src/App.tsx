@@ -21,6 +21,7 @@ import MemberRecommend from "./pages/member/MemberRecommend";
 import MemberWishlist from "./pages/member/MemberWishlist";
 import MemberNotes from "./pages/member/MemberNotes";
 import MemberCertificates from "./pages/member/MemberCertificates";
+import MemberNotifications from "./pages/member/MemberNotifications";
 
 // Static pages
 import About from "./pages/About";
@@ -47,6 +48,7 @@ import AdminCategories from "./pages/admin/AdminCategories";
 import AdminInstructors from "./pages/admin/AdminInstructors";
 import AdminLinePush from "./pages/admin/AdminLinePush";
 import AdminAnnouncements from "./pages/admin/AdminAnnouncements";
+import AdminNotifications from "./pages/admin/AdminNotifications";
 
 function Router() {
   return (
@@ -83,6 +85,9 @@ function Router() {
       </Route>
       <Route path="/member/certificates">
         <MemberLayout><MemberCertificates /></MemberLayout>
+      </Route>
+      <Route path="/member/notifications">
+        <MemberLayout><MemberNotifications /></MemberLayout>
       </Route>
       <Route path="/member/recommend">
         <MemberLayout><MemberRecommend /></MemberLayout>
@@ -127,6 +132,9 @@ function Router() {
       </Route>
       <Route path="/admin/announcements">
         <AdminLayout><AdminAnnouncements /></AdminLayout>
+      </Route>
+      <Route path="/admin/notifications">
+        <AdminLayout><AdminNotifications /></AdminLayout>
       </Route>
       <Route path="/admin/settings">
         <AdminLayout><AdminSettings /></AdminLayout>

@@ -1089,6 +1089,112 @@ const certificateRouter = router({
   }),
 });
 
+// ─── In-App Notification Router (站內通知) ───
+const inAppNotificationRouter = router({
+  // 取得未讀數量
+  unreadCount: protectedProcedure.query(async ({ ctx }) => {
+    return db.getUnreadNotificationCount(ctx.user.id);
+  }),
+
+  // 取得通知列表
+  list: protectedProcedure.input(z.object({ page: z.number().default(1), limit: z.number().default(20) }).optional()).query(async ({ ctx, input }) => {
+    return db.getUserNotifications(ctx.user.id, input?.page ?? 1, input?.limit ?? 20);
+  }),
+
+  // 標記單則已讀
+  markRead: protectedProcedure.input(z.object({ id: z.number() })).mutation(async ({ ctx, input }) => {
+    await db.markNotificationRead(input.id, ctx.user.id);
+    return { success: true };
+  }),
+
+  // 全部標記已讀
+  markAllRead: protectedProcedure.mutation(async ({ ctx }) => {
+    await db.markAllNotificationsRead(ctx.user.id);
+    return { success: true };
+  }),
+
+  // 刪除通知
+  delete: protectedProcedure.input(z.object({ id: z.number() })).mutation(async ({ ctx, input }) => {
+    await db.deleteNotification(input.id, ctx.user.id);
+    return { success: true };
+  }),
+});
+
+// ─── Admin Notification Push Router (管理員通知推送) ───
+const adminNotifyRouter = router({
+  // 發送通知（統一介面）
+  send: adminProcedure.input(z.object({
+    channels: z.array(z.enum(["in_app", "line", "email"])).min(1),
+    targetType: z.enum(["all", "user", "enrolled"]),
+    targetUserId: z.number().optional(),
+    courseId: z.number().optional(),
+    title: z.string().min(1),
+    content: z.string().min(1),
+    type: z.enum(["system", "order", "course", "promotion", "review", "certificate"]).default("system"),
+    link: z.string().optional(),
+    emailSubject: z.string().optional(),
+    emailButtonText: z.string().optional(),
+    emailButtonUrl: z.string().optional(),
+  })).mutation(async ({ ctx, input }) => {
+    const { sendNotification } = await import("./notificationService");
+    const result = await sendNotification({
+      ...input,
+      sentBy: ctx.user.id,
+    });
+    return result;
+  }),
+
+  // 取得通知發送記錄
+  logs: adminProcedure.input(z.object({ page: z.number().default(1), limit: z.number().default(20) }).optional()).query(async ({ input }) => {
+    return db.getNotificationLogs(input?.page ?? 1, input?.limit ?? 20);
+  }),
+
+  // SMTP 設定（讀取）
+  getSmtpConfig: adminProcedure.query(async () => {
+    const config = await db.getSiteConfig();
+    return {
+      smtp_host: config.smtp_host || "",
+      smtp_port: config.smtp_port || "587",
+      smtp_secure: config.smtp_secure || "false",
+      smtp_user: config.smtp_user || "",
+      smtp_pass: config.smtp_pass ? "******" : "",
+      smtp_from_name: config.smtp_from_name || "",
+      smtp_from_email: config.smtp_from_email || "",
+    };
+  }),
+
+  // SMTP 設定（更新）
+  updateSmtpConfig: adminProcedure.input(z.object({
+    smtp_host: z.string(),
+    smtp_port: z.string(),
+    smtp_secure: z.string(),
+    smtp_user: z.string(),
+    smtp_pass: z.string(),
+    smtp_from_name: z.string(),
+    smtp_from_email: z.string(),
+  })).mutation(async ({ input }) => {
+    const updates = Object.entries(input)
+      .filter(([_, v]) => v !== "******"); // 不覆蓋已遮蔽的密碼
+    for (const [key, value] of updates) {
+      await db.updateSiteConfig(key, value);
+    }
+    return { success: true };
+  }),
+
+  // 發送測試 Email
+  testEmail: adminProcedure.input(z.object({ to: z.string().email() })).mutation(async ({ input }) => {
+    const { sendEmail, buildEmailHtml } = await import("./email");
+    const html = buildEmailHtml({
+      title: "測試郵件",
+      content: "這是一封來自 KDLuck 平台的測試郵件。\n如果您收到此郵件，表示 SMTP 設定正確。",
+      buttonText: "前往平台",
+      buttonUrl: "https://kdlearn-xbhqxuj2.manus.space",
+    });
+    const result = await sendEmail({ to: input.to, subject: "[KDLuck] SMTP 測試郵件", html });
+    return result;
+  }),
+});
+
 // ─── Main Router ───
 export const appRouter = router({
   system: systemRouter,
@@ -1117,6 +1223,8 @@ export const appRouter = router({
   faq: faqRouter,
   note: noteRouter,
   certificate: certificateRouter,
+  inAppNotif: inAppNotificationRouter,
+  adminNotify: adminNotifyRouter,
 });
 
 export type AppRouter = typeof appRouter;
