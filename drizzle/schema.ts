@@ -118,6 +118,15 @@ export const orders = mysqlTable("orders", {
   paymentStatus: mysqlEnum("paymentStatus", ["pending", "paid", "failed", "refunded"]).default("pending").notNull(),
   paymentId: varchar("paymentId", { length: 256 }), // external payment ID
   paidAt: timestamp("paidAt"),
+  // 付款憑證相關
+  paymentProofUrl: text("paymentProofUrl"), // 付款憑證圖片 URL
+  paymentProofKey: text("paymentProofKey"), // S3 key
+  paymentNote: text("paymentNote"), // 用戶備註（轉帳後五碼等）
+  proofUploadedAt: timestamp("proofUploadedAt"), // 上傳時間
+  reviewStatus: mysqlEnum("reviewStatus", ["none", "pending_review", "approved", "rejected"]).default("none").notNull(),
+  reviewedAt: timestamp("reviewedAt"),
+  reviewedBy: int("reviewedBy"), // 審核管理員 ID
+  reviewNote: text("reviewNote"), // 審核備註（駁回原因等）
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

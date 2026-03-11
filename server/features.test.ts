@@ -51,7 +51,11 @@ vi.mock("./db", () => {
     { id: 1, code: "SAVE100", discountType: "fixed", discountValue: "100.00", minOrderAmount: null, maxUses: 10, usedCount: 2, courseId: null, startsAt: null, expiresAt: null, isActive: true, createdAt: new Date() },
     { id: 2, code: "EXPIRED", discountType: "percentage", discountValue: "20", minOrderAmount: null, maxUses: 0, usedCount: 0, courseId: null, startsAt: null, expiresAt: new Date("2020-01-01"), isActive: true, createdAt: new Date() },
   ];
-  const mockSiteConfig: Record<string, string> = { site_name: "KDLuck", site_description: "知識付費平台" };
+  const mockSiteConfig: Record<string, string> = {
+    site_name: "KDLuck", site_description: "知識付費平台",
+    bank_transfer_enabled: "true", bank_name: "中國信託商業銀行",
+    bank_code: "822", bank_account: "1234567890123", bank_holder: "KDLuck 有限公司",
+  };
   const mockNotificationTemplates = [
     { id: 1, templateKey: "order_paid", templateName: "付款成功通知", templateBody: "{name} 您好，課程已開通", isActive: true, createdAt: new Date(), updatedAt: new Date() },
   ];
@@ -101,6 +105,9 @@ vi.mock("./db", () => {
     getOrdersByUser: vi.fn().mockResolvedValue({ items: mockOrders, total: 0 }),
     getAllOrders: vi.fn().mockResolvedValue({ items: mockOrders, total: 0 }),
     updateOrderStatus: vi.fn(),
+    uploadPaymentProof: vi.fn(),
+    reviewPaymentProof: vi.fn(),
+    getOrdersWithPendingReview: vi.fn().mockResolvedValue({ items: [], total: 0 }),
     createEnrollment: vi.fn(),
     isEnrolled: vi.fn().mockResolvedValue(false),
     getEnrolledCourses: vi.fn().mockResolvedValue([]),
@@ -812,5 +819,198 @@ describe("Admin API - Category Management", () => {
     const caller = appRouter.createCaller(createAdminContext());
     const result = await caller.category.delete({ id: 1 });
     expect(result.success).toBe(true);
+  });
+});
+
+// ─── Payment Proof Upload Tests ───
+describe("Protected API - Payment Proof Upload", () => {
+  it("uploads payment proof for bank transfer order", async () => {
+    const db = await import("./db");
+    (db.getOrderByNo as any).mockResolvedValueOnce({
+      orderNo: "KD111111",
+      userId: 1,
+      courseId: 1,
+      amount: "1990.00",
+      paymentMethod: "bank_transfer",
+      paymentStatus: "pending",
+      reviewStatus: "none",
+    });
+
+    const caller = appRouter.createCaller(createUserContext());
+    const result = await caller.order.uploadProof({
+      orderNo: "KD111111",
+      base64Data: "iVBORw0KGgo=", // minimal base64
+      contentType: "image/png",
+      fileName: "proof.png",
+      note: "轉帳後五碼 12345",
+    });
+    expect(result.success).toBe(true);
+    expect(result.proofUrl).toBeDefined();
+    expect(db.uploadPaymentProof).toHaveBeenCalled();
+  });
+
+  it("rejects proof upload for non-bank-transfer order", async () => {
+    const db = await import("./db");
+    (db.getOrderByNo as any).mockResolvedValueOnce({
+      orderNo: "KD222222",
+      userId: 1,
+      courseId: 1,
+      amount: "1990.00",
+      paymentMethod: "ecpay",
+      paymentStatus: "pending",
+    });
+
+    const caller = appRouter.createCaller(createUserContext());
+    await expect(
+      caller.order.uploadProof({
+        orderNo: "KD222222",
+        base64Data: "iVBORw0KGgo=",
+        contentType: "image/png",
+        fileName: "proof.png",
+      })
+    ).rejects.toThrow("僅限銀行轉帳訂單");
+  });
+
+  it("rejects proof upload for already paid order", async () => {
+    const db = await import("./db");
+    (db.getOrderByNo as any).mockResolvedValueOnce({
+      orderNo: "KD333333",
+      userId: 1,
+      courseId: 1,
+      amount: "1990.00",
+      paymentMethod: "bank_transfer",
+      paymentStatus: "paid",
+    });
+
+    const caller = appRouter.createCaller(createUserContext());
+    await expect(
+      caller.order.uploadProof({
+        orderNo: "KD333333",
+        base64Data: "iVBORw0KGgo=",
+        contentType: "image/png",
+        fileName: "proof.png",
+      })
+    ).rejects.toThrow("訂單已付款");
+  });
+
+  it("rejects proof upload from non-owner", async () => {
+    const db = await import("./db");
+    (db.getOrderByNo as any).mockResolvedValueOnce({
+      orderNo: "KD444444",
+      userId: 999, // different user
+      courseId: 1,
+      amount: "1990.00",
+      paymentMethod: "bank_transfer",
+      paymentStatus: "pending",
+    });
+
+    const caller = appRouter.createCaller(createUserContext());
+    await expect(
+      caller.order.uploadProof({
+        orderNo: "KD444444",
+        base64Data: "iVBORw0KGgo=",
+        contentType: "image/png",
+        fileName: "proof.png",
+      })
+    ).rejects.toThrow();
+  });
+});
+
+// ─── Payment Proof Review Tests ───
+describe("Admin API - Payment Proof Review", () => {
+  it("approves payment proof and opens course", async () => {
+    const db = await import("./db");
+    (db.getOrderByNo as any).mockResolvedValueOnce({
+      orderNo: "KD555555",
+      userId: 1,
+      courseId: 1,
+      amount: "1990.00",
+      paymentMethod: "bank_transfer",
+      paymentStatus: "pending",
+      reviewStatus: "pending_review",
+      paymentProofUrl: "https://cdn.example.com/proof.png",
+      couponId: null,
+    });
+
+    const caller = appRouter.createCaller(createAdminContext());
+    const result = await caller.order.reviewProof({
+      orderNo: "KD555555",
+      approved: true,
+    });
+    expect(result.success).toBe(true);
+    expect(db.reviewPaymentProof).toHaveBeenCalledWith("KD555555", true, 99, undefined);
+    expect(db.createEnrollment).toHaveBeenCalled();
+  });
+
+  it("rejects payment proof with note", async () => {
+    const db = await import("./db");
+    const enrollCallsBefore = (db.createEnrollment as any).mock.calls.length;
+    (db.getOrderByNo as any).mockResolvedValueOnce({
+      orderNo: "KD666666",
+      userId: 1,
+      courseId: 1,
+      amount: "1990.00",
+      paymentMethod: "bank_transfer",
+      paymentStatus: "pending",
+      reviewStatus: "pending_review",
+      paymentProofUrl: "https://cdn.example.com/proof.png",
+      couponId: null,
+    });
+
+    const caller = appRouter.createCaller(createAdminContext());
+    const result = await caller.order.reviewProof({
+      orderNo: "KD666666",
+      approved: false,
+      reviewNote: "憑證模糊無法辨識",
+    });
+    expect(result.success).toBe(true);
+    expect(db.reviewPaymentProof).toHaveBeenCalledWith("KD666666", false, 99, "憑證模糊無法辨識");
+    // Ensure no NEW enrollment was created (only count calls after this test started)
+    expect((db.createEnrollment as any).mock.calls.length).toBe(enrollCallsBefore);
+  });
+
+  it("rejects review for order without pending proof", async () => {
+    const db = await import("./db");
+    (db.getOrderByNo as any).mockResolvedValueOnce({
+      orderNo: "KD777777",
+      userId: 1,
+      courseId: 1,
+      amount: "1990.00",
+      paymentMethod: "bank_transfer",
+      paymentStatus: "pending",
+      reviewStatus: "none",
+    });
+
+    const caller = appRouter.createCaller(createAdminContext());
+    await expect(
+      caller.order.reviewProof({ orderNo: "KD777777", approved: true })
+    ).rejects.toThrow("此訂單無待審核憑證");
+  });
+
+  it("lists pending reviews", async () => {
+    const caller = appRouter.createCaller(createAdminContext());
+    const result = await caller.order.pendingReviews({});
+    expect(result).toHaveProperty("items");
+    expect(result).toHaveProperty("total");
+  });
+
+  it("denies regular user access to review proof", async () => {
+    const caller = appRouter.createCaller(createUserContext());
+    await expect(
+      caller.order.reviewProof({ orderNo: "KD555555", approved: true })
+    ).rejects.toThrow();
+  });
+});
+
+// ─── Bank Info API Tests ───
+describe("Public API - Bank Info", () => {
+  it("returns bank info when enabled", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    const result = await caller.siteConfig.getBankInfo();
+    expect(result.enabled).toBe(true);
+    expect(result).toHaveProperty("bankName");
+    expect(result).toHaveProperty("bankCode");
+    expect(result).toHaveProperty("bankAccount");
+    expect(result).toHaveProperty("bankHolder");
   });
 });

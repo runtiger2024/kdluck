@@ -1,0 +1,9 @@
+{
+  "query": "ALTER TABLE `orders` ADD `paymentProofUrl` text;\nALTER TABLE `orders` ADD `paymentProofKey` text;\nALTER TABLE `orders` ADD `paymentNote` text;\nALTER TABLE `orders` ADD `proofUploadedAt` timestamp;\nALTER TABLE `orders` ADD `reviewStatus` enum('none','pending_review','approved','rejected') DEFAULT 'none' NOT NULL;\nALTER TABLE `orders` ADD `reviewedAt` timestamp;\nALTER TABLE `orders` ADD `reviewedBy` int;\nALTER TABLE `orders` ADD `reviewNote` text;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 28JPo3Vw26mPY6V.root --database XBhqXuJ2WiY8ShtDj5vvMz --execute ALTER TABLE `orders` ADD `paymentProofUrl` text;\nALTER TABLE `orders` ADD `paymentProofKey` text;\nALTER TABLE `orders` ADD `paymentNote` text;\nALTER TABLE `orders` ADD `proofUploadedAt` timestamp;\nALTER TABLE `orders` ADD `reviewStatus` enum('none','pending_review','approved','rejected') DEFAULT 'none' NOT NULL;\nALTER TABLE `orders` ADD `reviewedAt` timestamp;\nALTER TABLE `orders` ADD `reviewedBy` int;\nALTER TABLE `orders` ADD `reviewNote` text;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 7963
+}

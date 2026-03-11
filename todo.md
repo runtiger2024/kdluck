@@ -96,3 +96,13 @@
 - [x] 插入完整測試資料：網站配置（完整 site_config）
 - [x] 插入完整測試資料：模擬訂單與評價
 - [x] 深度檢查所有功能完整性並修復缺失
+
+## 銀行轉帳付款憑證功能
+- [x] 資料庫：orders 表新增付款憑證欄位（paymentProofUrl, paymentProofKey, paymentNote, reviewedAt, reviewedBy, reviewNote）
+- [x] 後端：付款憑證上傳 API（protectedProcedure）
+- [x] 後端：管理員審核憑證 API（確認/駁回 + 審核備註）
+- [x] 前端：銀行轉帳訂單建立後顯示完整付款資訊（銀行名稱、代碼、帳號、戶名）
+- [x] 前端：付款憑證上傳介面（圖片上傳 + 備註）
+- [x] 前端：會員訂單頁面顯示憑證狀態與已上傳憑證
+- [x] 管理後台：訂單管理頁面加入憑證審核功能（查看憑證圖片 + 確認/駁回）
+- [x] 撰寫相關 Vitest 測試（90 tests passed）

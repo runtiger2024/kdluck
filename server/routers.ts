@@ -352,6 +352,25 @@ const orderRouter = router({
   }).optional()).query(async ({ input }) => {
     return db.getAllOrders(input?.page, input?.limit, input?.status);
   }),
+  // 用戶上傳付款憑證
+  uploadProof: protectedProcedure.input(z.object({
+    orderNo: z.string(),
+    base64Data: z.string(),
+    contentType: z.string(),
+    fileName: z.string(),
+    note: z.string().optional(),
+  })).mutation(async ({ input, ctx }) => {
+    const order = await db.getOrderByNo(input.orderNo);
+    if (!order) throw new TRPCError({ code: "NOT_FOUND" });
+    if (order.userId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN" });
+    if (order.paymentMethod !== "bank_transfer") throw new TRPCError({ code: "BAD_REQUEST", message: "僅限銀行轉帳訂單" });
+    if (order.paymentStatus === "paid") throw new TRPCError({ code: "BAD_REQUEST", message: "訂單已付款" });
+    const buffer = Buffer.from(input.base64Data, "base64");
+    const key = `payment-proofs/${order.orderNo}-${nanoid(8)}.${input.fileName.split(".").pop() || "jpg"}`;
+    const { url } = await storagePut(key, buffer, input.contentType);
+    await db.uploadPaymentProof(input.orderNo, url, key, input.note);
+    return { success: true, proofUrl: url };
+  }),
   // Admin: confirm bank transfer payment
   confirmPayment: adminProcedure.input(z.object({
     orderNo: z.string(),
@@ -363,6 +382,29 @@ const orderRouter = router({
     await db.createEnrollment({ userId: order.userId, courseId: order.courseId });
     if (order.couponId) await db.incrementCouponUsage(order.couponId);
     return { success: true };
+  }),
+  // Admin: 審核付款憑證
+  reviewProof: adminProcedure.input(z.object({
+    orderNo: z.string(),
+    approved: z.boolean(),
+    reviewNote: z.string().optional(),
+  })).mutation(async ({ input, ctx }) => {
+    const order = await db.getOrderByNo(input.orderNo);
+    if (!order) throw new TRPCError({ code: "NOT_FOUND" });
+    if (order.reviewStatus !== "pending_review") throw new TRPCError({ code: "BAD_REQUEST", message: "此訂單無待審核憑證" });
+    await db.reviewPaymentProof(input.orderNo, input.approved, ctx.user.id, input.reviewNote);
+    if (input.approved) {
+      await db.createEnrollment({ userId: order.userId, courseId: order.courseId });
+      if (order.couponId) await db.incrementCouponUsage(order.couponId);
+    }
+    return { success: true };
+  }),
+  // Admin: 待審核憑證列表
+  pendingReviews: adminProcedure.input(z.object({
+    page: z.number().optional(),
+    limit: z.number().optional(),
+  }).optional()).query(async ({ input }) => {
+    return db.getOrdersWithPendingReview(input?.page, input?.limit);
   }),
 });
 
@@ -477,6 +519,17 @@ const couponRouter = router({
 const siteConfigRouter = router({
   get: publicProcedure.query(async () => {
     return db.getSiteConfig();
+  }),
+  getBankInfo: publicProcedure.query(async () => {
+    const config = await db.getSiteConfig();
+    if (config.bank_transfer_enabled !== "true") return { enabled: false };
+    return {
+      enabled: true,
+      bankName: config.bank_name || "",
+      bankCode: config.bank_code || "",
+      bankAccount: config.bank_account || "",
+      bankHolder: config.bank_holder || "",
+    };
   }),
   update: adminProcedure.input(z.object({
     key: z.string(),

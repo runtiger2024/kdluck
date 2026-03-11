@@ -314,6 +314,47 @@ export async function updateOrderStatus(orderNo: string, status: "pending" | "pa
   await db.update(orders).set(updateData).where(eq(orders.orderNo, orderNo));
 }
 
+export async function uploadPaymentProof(orderNo: string, proofUrl: string, proofKey: string, note?: string) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(orders).set({
+    paymentProofUrl: proofUrl,
+    paymentProofKey: proofKey,
+    paymentNote: note || null,
+    proofUploadedAt: new Date(),
+    reviewStatus: "pending_review",
+  }).where(eq(orders.orderNo, orderNo));
+}
+
+export async function reviewPaymentProof(
+  orderNo: string,
+  approved: boolean,
+  reviewerId: number,
+  reviewNote?: string
+) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(orders).set({
+    reviewStatus: approved ? "approved" : "rejected",
+    reviewedAt: new Date(),
+    reviewedBy: reviewerId,
+    reviewNote: reviewNote || null,
+    ...(approved ? { paymentStatus: "paid", paidAt: new Date() } : {}),
+  }).where(eq(orders.orderNo, orderNo));
+}
+
+export async function getOrdersWithPendingReview(page = 1, limit = 20) {
+  const db = await getDb();
+  if (!db) return { items: [], total: 0 };
+  const offset = (page - 1) * limit;
+  const where = eq(orders.reviewStatus, "pending_review");
+  const [items, countResult] = await Promise.all([
+    db.select().from(orders).where(where).orderBy(desc(orders.proofUploadedAt)).limit(limit).offset(offset),
+    db.select({ count: sql<number>`count(*)` }).from(orders).where(where),
+  ]);
+  return { items, total: countResult[0]?.count ?? 0 };
+}
+
 // ─── Enrollments ───
 export async function createEnrollment(data: InsertEnrollment) {
   const db = await getDb();

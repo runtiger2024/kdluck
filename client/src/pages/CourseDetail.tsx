@@ -130,10 +130,10 @@ export default function CourseDetail() {
             toast.error("連接綠界付款失敗，請稍後再試");
           }
         } else {
-          // 銀行轉帳
+          // 銀行轉帳 - 導向付款結果頁顯示轉帳資訊
           setOrderDialog(false);
-          toast.success(`訂單已建立：${data.orderNo}，請完成轉帳付款`);
-          setLocation("/member/orders");
+          toast.success(`訂單已建立，請依指示完成轉帳並上傳憑證`);
+          setLocation(`/payment/result?orderNo=${data.orderNo}`);
         }
         setIsSubmitting(false);
       },
@@ -420,12 +420,12 @@ export default function CourseDetail() {
               </div>
             )}
             {paymentMethod === "bank_transfer" && (
-              <div className="p-3 rounded-lg bg-secondary/30 text-sm">
+              <div className="p-3 rounded-lg bg-secondary/30 text-sm space-y-2">
                 <div className="flex items-center gap-2 mb-1">
                   <Building2 className="h-4 w-4" />
                   <p className="font-medium">銀行轉帳資訊</p>
                 </div>
-                <p className="text-muted-foreground">請轉帳至指定帳戶後，管理員將手動確認付款並開通課程。處理時間約 1-2 個工作天。</p>
+                <p className="text-muted-foreground">確認訂單後將顯示完整轉帳資訊，請依指示完成轉帳並上傳付款憑證。審核通過後即自動開通課程。</p>
               </div>
             )}
             <div className="flex justify-end gap-2">
