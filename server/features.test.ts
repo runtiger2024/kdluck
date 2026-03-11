@@ -1,0 +1,629 @@
+import { describe, expect, it, vi, beforeEach } from "vitest";
+import { appRouter } from "./routers";
+import type { TrpcContext } from "./_core/context";
+
+// ─── Mock database module ───
+vi.mock("./db", () => {
+  const mockCourses = [
+    {
+      id: 1, title: "React 入門", slug: "react-intro", subtitle: "從零開始學 React",
+      description: "完整的 React 教學", coverImageUrl: null, previewVideoUrl: null,
+      categoryId: 1, instructorId: 1, price: "1990.00", originalPrice: "2990.00",
+      status: "published", level: "beginner", totalLessons: 10, totalDuration: 3600,
+      enrollmentCount: 50, avgRating: "4.50", ratingCount: 10,
+      seoTitle: null, seoDescription: null,
+      createdAt: new Date(), updatedAt: new Date(),
+    },
+    {
+      id: 2, title: "Node.js 進階", slug: "nodejs-advanced", subtitle: "深入 Node.js",
+      description: "進階 Node.js 教學", coverImageUrl: null, previewVideoUrl: null,
+      categoryId: 2, instructorId: 1, price: "0.00", originalPrice: null,
+      status: "published", level: "advanced", totalLessons: 5, totalDuration: 1800,
+      enrollmentCount: 20, avgRating: "4.80", ratingCount: 5,
+      seoTitle: null, seoDescription: null,
+      createdAt: new Date(), updatedAt: new Date(),
+    },
+  ];
+
+  const mockCategories = [
+    { id: 1, name: "前端開發", slug: "frontend", description: "前端相關課程", iconUrl: null, sortOrder: 0, createdAt: new Date() },
+    { id: 2, name: "後端開發", slug: "backend", description: "後端相關課程", iconUrl: null, sortOrder: 1, createdAt: new Date() },
+  ];
+
+  const mockInstructors = [
+    { id: 1, name: "王老師", title: "資深工程師", bio: "10年經驗", avatarUrl: null, createdAt: new Date(), updatedAt: new Date() },
+  ];
+
+  const mockChapters = [
+    { id: 1, courseId: 1, title: "第一章 基礎", sortOrder: 0, createdAt: new Date() },
+    { id: 2, courseId: 1, title: "第二章 進階", sortOrder: 1, createdAt: new Date() },
+  ];
+
+  const mockLessons = [
+    { id: 1, chapterId: 1, courseId: 1, title: "1-1 環境設定", description: null, videoKey: "videos/1.mp4", videoUrl: null, duration: 600, sortOrder: 0, isFreePreview: true, createdAt: new Date(), updatedAt: new Date() },
+    { id: 2, chapterId: 1, courseId: 1, title: "1-2 JSX 語法", description: null, videoKey: null, videoUrl: "https://example.com/video.mp4", duration: 900, sortOrder: 1, isFreePreview: false, createdAt: new Date(), updatedAt: new Date() },
+  ];
+
+  const mockOrders: any[] = [];
+  const mockEnrollments: any[] = [];
+  const mockReviews: any[] = [];
+  const mockCoupons = [
+    { id: 1, code: "SAVE100", discountType: "fixed", discountValue: "100.00", minOrderAmount: null, maxUses: 10, usedCount: 2, courseId: null, startsAt: null, expiresAt: null, isActive: true, createdAt: new Date() },
+    { id: 2, code: "EXPIRED", discountType: "percentage", discountValue: "20", minOrderAmount: null, maxUses: 0, usedCount: 0, courseId: null, startsAt: null, expiresAt: new Date("2020-01-01"), isActive: true, createdAt: new Date() },
+  ];
+  const mockSiteConfig: Record<string, string> = { site_name: "KDLuck", site_description: "知識付費平台" };
+  const mockNotificationTemplates = [
+    { id: 1, templateKey: "order_paid", templateName: "付款成功通知", templateBody: "{name} 您好，課程已開通", isActive: true, createdAt: new Date(), updatedAt: new Date() },
+  ];
+  const mockProgress: any[] = [];
+
+  return {
+    getDb: vi.fn().mockResolvedValue({}),
+    upsertUser: vi.fn(),
+    getUserByOpenId: vi.fn(),
+    getAllUsers: vi.fn().mockResolvedValue({ items: [], total: 0 }),
+    updateUserRole: vi.fn(),
+    getAllCategories: vi.fn().mockResolvedValue(mockCategories),
+    createCategory: vi.fn(),
+    updateCategory: vi.fn(),
+    deleteCategory: vi.fn(),
+    getAllInstructors: vi.fn().mockResolvedValue(mockInstructors),
+    getInstructorById: vi.fn().mockImplementation((id: number) => Promise.resolve(mockInstructors.find(i => i.id === id))),
+    createInstructor: vi.fn(),
+    updateInstructor: vi.fn(),
+    deleteInstructor: vi.fn(),
+    getPublishedCourses: vi.fn().mockImplementation((opts: any) => {
+      let items = mockCourses.filter(c => c.status === "published");
+      if (opts?.categoryId) items = items.filter(c => c.categoryId === opts.categoryId);
+      if (opts?.search) items = items.filter(c => c.title.includes(opts.search));
+      return Promise.resolve({ items, total: items.length });
+    }),
+    getAllCourses: vi.fn().mockResolvedValue({ items: mockCourses, total: mockCourses.length }),
+    getCourseById: vi.fn().mockImplementation((id: number) => Promise.resolve(mockCourses.find(c => c.id === id))),
+    getCourseBySlug: vi.fn().mockImplementation((slug: string) => Promise.resolve(mockCourses.find(c => c.slug === slug))),
+    createCourse: vi.fn().mockResolvedValue(3),
+    updateCourse: vi.fn(),
+    deleteCourse: vi.fn(),
+    getChaptersByCourse: vi.fn().mockResolvedValue(mockChapters),
+    createChapter: vi.fn().mockResolvedValue(3),
+    updateChapter: vi.fn(),
+    deleteChapter: vi.fn(),
+    getLessonsByChapter: vi.fn().mockResolvedValue(mockLessons.filter(l => l.chapterId === 1)),
+    getLessonsByCourse: vi.fn().mockResolvedValue(mockLessons),
+    getLessonById: vi.fn().mockImplementation((id: number) => Promise.resolve(mockLessons.find(l => l.id === id))),
+    createLesson: vi.fn().mockResolvedValue(3),
+    updateLesson: vi.fn(),
+    deleteLesson: vi.fn(),
+    createOrder: vi.fn(),
+    getOrderByNo: vi.fn().mockImplementation((orderNo: string) => {
+      return Promise.resolve(mockOrders.find(o => o.orderNo === orderNo));
+    }),
+    getOrdersByUser: vi.fn().mockResolvedValue({ items: mockOrders, total: 0 }),
+    getAllOrders: vi.fn().mockResolvedValue({ items: mockOrders, total: 0 }),
+    updateOrderStatus: vi.fn(),
+    createEnrollment: vi.fn(),
+    isEnrolled: vi.fn().mockResolvedValue(false),
+    getEnrolledCourses: vi.fn().mockResolvedValue([]),
+    upsertProgress: vi.fn(),
+    getProgressByCourse: vi.fn().mockResolvedValue(mockProgress),
+    getProgressByLesson: vi.fn().mockResolvedValue(undefined),
+    getReviewsByCourse: vi.fn().mockResolvedValue(mockReviews),
+    createReview: vi.fn(),
+    getAllCoupons: vi.fn().mockResolvedValue({ items: mockCoupons, total: mockCoupons.length }),
+    getCouponByCode: vi.fn().mockImplementation((code: string) => Promise.resolve(mockCoupons.find(c => c.code === code))),
+    createCoupon: vi.fn(),
+    updateCoupon: vi.fn(),
+    deleteCoupon: vi.fn(),
+    incrementCouponUsage: vi.fn(),
+    getSiteConfig: vi.fn().mockResolvedValue(mockSiteConfig),
+    updateSiteConfig: vi.fn(),
+    getAllNotificationTemplates: vi.fn().mockResolvedValue(mockNotificationTemplates),
+    updateNotificationTemplate: vi.fn(),
+    getSalesStats: vi.fn().mockResolvedValue({ totalRevenue: 19900, totalOrders: 10, paidOrders: 8, totalUsers: 50, totalCourses: 5 }),
+    getMonthlySales: vi.fn().mockResolvedValue([{ month: "2026-03", revenue: 5000, orderCount: 3 }]),
+    getUserGrowth: vi.fn().mockResolvedValue([{ month: "2026-03", userCount: 15 }]),
+    getCategoryById: vi.fn().mockImplementation((id: number) => Promise.resolve(mockCategories.find(c => c.id === id))),
+  };
+});
+
+// Mock storage
+vi.mock("./storage", () => ({
+  storagePut: vi.fn().mockResolvedValue({ key: "test/file.mp4", url: "https://cdn.example.com/test/file.mp4" }),
+  storageGet: vi.fn().mockResolvedValue({ key: "videos/1.mp4", url: "https://cdn.example.com/signed/videos/1.mp4" }),
+}));
+
+// Mock LLM
+vi.mock("./_core/llm", () => ({
+  invokeLLM: vi.fn().mockResolvedValue({
+    choices: [{ message: { content: JSON.stringify({ ids: [2], reason: "基於您的學習歷史推薦" }) } }],
+  }),
+}));
+
+// ─── Context helpers ───
+type AuthenticatedUser = NonNullable<TrpcContext["user"]>;
+
+function createPublicContext(): TrpcContext {
+  return {
+    user: null,
+    req: { protocol: "https", headers: {} } as TrpcContext["req"],
+    res: { clearCookie: vi.fn() } as unknown as TrpcContext["res"],
+  };
+}
+
+function createUserContext(overrides?: Partial<AuthenticatedUser>): TrpcContext {
+  const user: AuthenticatedUser = {
+    id: 1,
+    openId: "test-user-001",
+    email: "test@example.com",
+    name: "Test User",
+    avatarUrl: null,
+    loginMethod: "manus",
+    lineUserId: null,
+    role: "user",
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    lastSignedIn: new Date(),
+    ...overrides,
+  };
+  return {
+    user,
+    req: { protocol: "https", headers: {} } as TrpcContext["req"],
+    res: { clearCookie: vi.fn() } as unknown as TrpcContext["res"],
+  };
+}
+
+function createAdminContext(): TrpcContext {
+  return createUserContext({ id: 99, openId: "admin-001", role: "admin", name: "Admin" });
+}
+
+// ─── Tests ───
+
+describe("Public API - Categories", () => {
+  it("lists all categories", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    const result = await caller.category.list();
+    expect(result).toHaveLength(2);
+    expect(result[0].name).toBe("前端開發");
+  });
+});
+
+describe("Public API - Courses", () => {
+  it("lists published courses", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    const result = await caller.course.published({});
+    expect(result.items).toHaveLength(2);
+    expect(result.total).toBe(2);
+  });
+
+  it("filters courses by category", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    const result = await caller.course.published({ categoryId: 1 });
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0].title).toBe("React 入門");
+  });
+
+  it("searches courses by keyword", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    const result = await caller.course.published({ search: "Node" });
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0].slug).toBe("nodejs-advanced");
+  });
+
+  it("gets course by slug", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    const result = await caller.course.getBySlug({ slug: "react-intro" });
+    expect(result).toBeDefined();
+    expect(result?.title).toBe("React 入門");
+  });
+
+  it("gets course by id", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    const result = await caller.course.getById({ id: 1 });
+    expect(result).toBeDefined();
+    expect(result?.price).toBe("1990.00");
+  });
+});
+
+describe("Public API - Chapters & Lessons", () => {
+  it("lists chapters by course", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    const result = await caller.chapter.listByCourse({ courseId: 1 });
+    expect(result).toHaveLength(2);
+  });
+
+  it("lists lessons by course", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    const result = await caller.lesson.listByCourse({ courseId: 1 });
+    expect(result).toHaveLength(2);
+  });
+});
+
+describe("Public API - Instructors", () => {
+  it("lists all instructors", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    const result = await caller.instructor.list();
+    expect(result).toHaveLength(1);
+    expect(result[0].name).toBe("王老師");
+  });
+
+  it("gets instructor by id", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    const result = await caller.instructor.getById({ id: 1 });
+    expect(result?.name).toBe("王老師");
+  });
+});
+
+describe("Public API - Coupons", () => {
+  it("validates a valid coupon", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    const result = await caller.coupon.validate({ code: "SAVE100" });
+    expect(result.valid).toBe(true);
+    expect(result.coupon?.discountType).toBe("fixed");
+  });
+
+  it("rejects an expired coupon", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    const result = await caller.coupon.validate({ code: "EXPIRED" });
+    expect(result.valid).toBe(false);
+    expect(result.message).toContain("過期");
+  });
+
+  it("rejects an invalid coupon code", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    const result = await caller.coupon.validate({ code: "NONEXIST" });
+    expect(result.valid).toBe(false);
+  });
+});
+
+describe("Public API - Site Config", () => {
+  it("gets site config", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    const result = await caller.siteConfig.get();
+    expect(result.site_name).toBe("KDLuck");
+  });
+});
+
+describe("Public API - Reviews", () => {
+  it("lists reviews by course", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    const result = await caller.review.listByCourse({ courseId: 1 });
+    expect(Array.isArray(result)).toBe(true);
+  });
+});
+
+describe("Protected API - Auth", () => {
+  it("returns user info when authenticated", async () => {
+    const caller = appRouter.createCaller(createUserContext());
+    const result = await caller.auth.me();
+    expect(result).toBeDefined();
+    expect(result?.name).toBe("Test User");
+  });
+
+  it("returns null for unauthenticated user", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    const result = await caller.auth.me();
+    expect(result).toBeNull();
+  });
+});
+
+describe("Protected API - Enrollment", () => {
+  it("checks enrollment status", async () => {
+    const caller = appRouter.createCaller(createUserContext());
+    const result = await caller.enrollment.check({ courseId: 1 });
+    expect(result).toHaveProperty("enrolled");
+    expect(typeof result.enrolled).toBe("boolean");
+  });
+
+  it("lists enrolled courses", async () => {
+    const caller = appRouter.createCaller(createUserContext());
+    const result = await caller.enrollment.myCourses();
+    expect(Array.isArray(result)).toBe(true);
+  });
+});
+
+describe("Protected API - Orders", () => {
+  it("creates a free course order and auto-enrolls", async () => {
+    const db = await import("./db");
+    (db.isEnrolled as any).mockResolvedValueOnce(false);
+
+    const caller = appRouter.createCaller(createUserContext());
+    const result = await caller.order.create({
+      courseId: 2, // Free course
+      paymentMethod: "free",
+    });
+    expect(result.status).toBe("paid");
+    expect(result.amount).toBe(0);
+    expect(db.createEnrollment).toHaveBeenCalled();
+  });
+
+  it("creates a paid course order with pending status", async () => {
+    const db = await import("./db");
+    (db.isEnrolled as any).mockResolvedValueOnce(false);
+
+    const caller = appRouter.createCaller(createUserContext());
+    const result = await caller.order.create({
+      courseId: 1,
+      paymentMethod: "bank_transfer",
+    });
+    expect(result.status).toBe("pending");
+    expect(result.amount).toBe(1990);
+  });
+
+  it("creates order with coupon discount", async () => {
+    const db = await import("./db");
+    (db.isEnrolled as any).mockResolvedValueOnce(false);
+
+    const caller = appRouter.createCaller(createUserContext());
+    const result = await caller.order.create({
+      courseId: 1,
+      paymentMethod: "bank_transfer",
+      couponCode: "SAVE100",
+    });
+    expect(result.amount).toBe(1890); // 1990 - 100
+    expect(result.status).toBe("pending");
+  });
+
+  it("prevents duplicate enrollment", async () => {
+    const db = await import("./db");
+    (db.isEnrolled as any).mockResolvedValueOnce(true);
+
+    const caller = appRouter.createCaller(createUserContext());
+    await expect(
+      caller.order.create({ courseId: 1, paymentMethod: "bank_transfer" })
+    ).rejects.toThrow("您已購買此課程");
+  });
+
+  it("lists user orders", async () => {
+    const caller = appRouter.createCaller(createUserContext());
+    const result = await caller.order.myOrders({});
+    expect(result).toHaveProperty("items");
+    expect(result).toHaveProperty("total");
+  });
+});
+
+describe("Protected API - Progress", () => {
+  it("updates learning progress", async () => {
+    const db = await import("./db");
+    const caller = appRouter.createCaller(createUserContext());
+    const result = await caller.progress.update({
+      lessonId: 1,
+      courseId: 1,
+      progressSeconds: 300,
+      completed: false,
+    });
+    expect(result.success).toBe(true);
+    expect(db.upsertProgress).toHaveBeenCalled();
+  });
+
+  it("gets progress by course", async () => {
+    const caller = appRouter.createCaller(createUserContext());
+    const result = await caller.progress.getByCourse({ courseId: 1 });
+    expect(Array.isArray(result)).toBe(true);
+  });
+});
+
+describe("Protected API - Signed URL", () => {
+  it("returns signed URL for free preview lesson", async () => {
+    const caller = appRouter.createCaller(createUserContext());
+    const result = await caller.lesson.getSignedUrl({ lessonId: 1 });
+    expect(result.url).toBeDefined();
+    expect(result.url).toContain("signed");
+  });
+
+  it("denies access to paid lesson without enrollment", async () => {
+    const db = await import("./db");
+    (db.isEnrolled as any).mockResolvedValueOnce(false);
+
+    const caller = appRouter.createCaller(createUserContext());
+    await expect(
+      caller.lesson.getSignedUrl({ lessonId: 2 })
+    ).rejects.toThrow("You need to purchase this course");
+  });
+});
+
+describe("Protected API - Reviews", () => {
+  it("rejects review from non-enrolled user", async () => {
+    const db = await import("./db");
+    (db.isEnrolled as any).mockResolvedValueOnce(false);
+
+    const caller = appRouter.createCaller(createUserContext());
+    await expect(
+      caller.review.create({ courseId: 1, rating: 5, comment: "Great!" })
+    ).rejects.toThrow("需購買課程才能評價");
+  });
+
+  it("allows review from enrolled user", async () => {
+    const db = await import("./db");
+    (db.isEnrolled as any).mockResolvedValueOnce(true);
+
+    const caller = appRouter.createCaller(createUserContext());
+    const result = await caller.review.create({ courseId: 1, rating: 5, comment: "Great!" });
+    expect(result.success).toBe(true);
+  });
+});
+
+describe("Admin API - Access Control", () => {
+  it("denies regular user access to admin endpoints", async () => {
+    const caller = appRouter.createCaller(createUserContext());
+    await expect(caller.course.all({})).rejects.toThrow();
+  });
+
+  it("denies unauthenticated access to admin endpoints", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    await expect(caller.course.all({})).rejects.toThrow();
+  });
+});
+
+describe("Admin API - Course Management", () => {
+  it("lists all courses for admin", async () => {
+    const caller = appRouter.createCaller(createAdminContext());
+    const result = await caller.course.all({});
+    expect(result.items).toHaveLength(2);
+  });
+
+  it("creates a new course", async () => {
+    const caller = appRouter.createCaller(createAdminContext());
+    const result = await caller.course.create({
+      title: "Vue.js 入門",
+      slug: "vue-intro",
+      price: "1500.00",
+      status: "draft",
+      level: "beginner",
+    });
+    expect(result.success).toBe(true);
+    expect(result.id).toBe(3);
+  });
+
+  it("updates a course", async () => {
+    const db = await import("./db");
+    const caller = appRouter.createCaller(createAdminContext());
+    const result = await caller.course.update({ id: 1, title: "React 入門 v2" });
+    expect(result.success).toBe(true);
+    expect(db.updateCourse).toHaveBeenCalledWith(1, { title: "React 入門 v2" });
+  });
+
+  it("deletes a course", async () => {
+    const db = await import("./db");
+    const caller = appRouter.createCaller(createAdminContext());
+    const result = await caller.course.delete({ id: 1 });
+    expect(result.success).toBe(true);
+    expect(db.deleteCourse).toHaveBeenCalledWith(1);
+  });
+});
+
+describe("Admin API - Chapter Management", () => {
+  it("creates a chapter", async () => {
+    const caller = appRouter.createCaller(createAdminContext());
+    const result = await caller.chapter.create({ courseId: 1, title: "新章節" });
+    expect(result.success).toBe(true);
+  });
+
+  it("updates a chapter", async () => {
+    const caller = appRouter.createCaller(createAdminContext());
+    const result = await caller.chapter.update({ id: 1, title: "更新的章節" });
+    expect(result.success).toBe(true);
+  });
+});
+
+describe("Admin API - Coupon Management", () => {
+  it("lists all coupons", async () => {
+    const caller = appRouter.createCaller(createAdminContext());
+    const result = await caller.coupon.all({});
+    expect(result.items).toHaveLength(2);
+  });
+
+  it("creates a coupon", async () => {
+    const caller = appRouter.createCaller(createAdminContext());
+    const result = await caller.coupon.create({
+      code: "NEW50",
+      discountType: "percentage",
+      discountValue: "50",
+      maxUses: 100,
+    });
+    expect(result.success).toBe(true);
+  });
+});
+
+describe("Admin API - Site Config", () => {
+  it("updates site config", async () => {
+    const db = await import("./db");
+    const caller = appRouter.createCaller(createAdminContext());
+    const result = await caller.siteConfig.update({ key: "site_name", value: "New Name" });
+    expect(result.success).toBe(true);
+    expect(db.updateSiteConfig).toHaveBeenCalledWith("site_name", "New Name");
+  });
+
+  it("batch updates site config", async () => {
+    const caller = appRouter.createCaller(createAdminContext());
+    const result = await caller.siteConfig.updateBatch([
+      { key: "site_name", value: "KDLuck v2" },
+      { key: "contact_email", value: "new@example.com" },
+    ]);
+    expect(result.success).toBe(true);
+  });
+});
+
+describe("Admin API - Notification Templates", () => {
+  it("lists notification templates", async () => {
+    const caller = appRouter.createCaller(createAdminContext());
+    const result = await caller.notification.templates();
+    expect(result).toHaveLength(1);
+    expect(result[0].templateKey).toBe("order_paid");
+  });
+
+  it("updates a notification template", async () => {
+    const caller = appRouter.createCaller(createAdminContext());
+    const result = await caller.notification.updateTemplate({
+      id: 1,
+      templateBody: "{name} 您好，感謝購買",
+    });
+    expect(result.success).toBe(true);
+  });
+});
+
+describe("Admin API - Analytics", () => {
+  it("gets sales stats", async () => {
+    const caller = appRouter.createCaller(createAdminContext());
+    const result = await caller.analytics.stats();
+    expect(result.totalRevenue).toBe(19900);
+    expect(result.totalUsers).toBe(50);
+  });
+
+  it("gets monthly sales", async () => {
+    const caller = appRouter.createCaller(createAdminContext());
+    const result = await caller.analytics.monthlySales();
+    expect(result).toHaveLength(1);
+    expect(result[0].month).toBe("2026-03");
+  });
+
+  it("gets user growth", async () => {
+    const caller = appRouter.createCaller(createAdminContext());
+    const result = await caller.analytics.userGrowth();
+    expect(result).toHaveLength(1);
+  });
+});
+
+describe("Admin API - Order Confirmation", () => {
+  it("confirms bank transfer payment", async () => {
+    const db = await import("./db");
+    (db.getOrderByNo as any).mockResolvedValueOnce({
+      orderNo: "KD123456",
+      userId: 1,
+      courseId: 1,
+      amount: "1990.00",
+      paymentStatus: "pending",
+      couponId: null,
+    });
+
+    const caller = appRouter.createCaller(createAdminContext());
+    const result = await caller.order.confirmPayment({ orderNo: "KD123456" });
+    expect(result.success).toBe(true);
+    expect(db.updateOrderStatus).toHaveBeenCalledWith("KD123456", "paid", "manual_confirm");
+    expect(db.createEnrollment).toHaveBeenCalled();
+  });
+
+  it("rejects confirming already paid order", async () => {
+    const db = await import("./db");
+    (db.getOrderByNo as any).mockResolvedValueOnce({
+      orderNo: "KD123456",
+      userId: 1,
+      courseId: 1,
+      amount: "1990.00",
+      paymentStatus: "paid",
+    });
+
+    const caller = appRouter.createCaller(createAdminContext());
+    await expect(
+      caller.order.confirmPayment({ orderNo: "KD123456" })
+    ).rejects.toThrow("已付款");
+  });
+});
+
+describe("Protected API - LLM Recommendations", () => {
+  it("returns course recommendations", async () => {
+    const caller = appRouter.createCaller(createUserContext());
+    const result = await caller.recommend.getCourseRecommendations();
+    expect(result).toHaveProperty("recommendations");
+    expect(result).toHaveProperty("reason");
+  });
+});

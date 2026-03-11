@@ -1,0 +1,9 @@
+{
+  "query": "INSERT INTO site_config (configKey, configValue) VALUES \n('site_name', 'KDLuck 知識學院'),\n('site_logo', ''),\n('site_description', '打開知識的大門，開啟無限可能'),\n('contact_email', 'support@kdluck.com'),\n('contact_phone', ''),\n('seo_keywords', '線上課程,知識付費,學習平台'),\n('footer_text', '© 2026 KDLuck. All rights reserved.');\n\nINSERT INTO notification_templates (templateKey, templateName, templateBody) VALUES\n('order_paid', '訂單付款成功通知', '{name} 您好！您的課程「{courseName}」已成功開通，立即開始學習吧！'),\n('new_course', '新課程上架通知', '{name} 您好！新課程「{courseName}」已上架，快來看看吧！'),\n('coupon_created', '優惠券發放通知', '{name} 您好！您收到一張優惠券 {couponCode}，趕快使用吧！');",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 28JPo3Vw26mPY6V.root --database XBhqXuJ2WiY8ShtDj5vvMz --execute INSERT INTO site_config (configKey, configValue) VALUES \n('site_name', 'KDLuck 知識學院'),\n('site_logo', ''),\n('site_description', '打開知識的大門，開啟無限可能'),\n('contact_email', 'support@kdluck.com'),\n('contact_phone', ''),\n('seo_keywords', '線上課程,知識付費,學習平台'),\n('footer_text', '© 2026 KDLuck. All rights reserved.');\n\nINSERT INTO notification_templates (templateKey, templateName, templateBody) VALUES\n('order_paid', '訂單付款成功通知', '{name} 您好！您的課程「{courseName}」已成功開通，立即開始學習吧！'),\n('new_course', '新課程上架通知', '{name} 您好！新課程「{courseName}」已上架，快來看看吧！'),\n('coupon_created', '優惠券發放通知', '{name} 您好！您收到一張優惠券 {couponCode}，趕快使用吧！');",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1944
+}
