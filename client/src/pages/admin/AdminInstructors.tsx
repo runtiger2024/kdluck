@@ -86,13 +86,13 @@ export default function AdminInstructors() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">講師管理</h1>
-          <p className="text-muted-foreground mt-1">管理平台講師資料</p>
+          <h1 className="text-xl sm:text-2xl font-bold">講師管理</h1>
+          <p className="text-muted-foreground text-xs sm:text-sm mt-1">管理平台講師資料</p>
         </div>
-        <Button onClick={openCreate}><Plus className="h-4 w-4 mr-2" />新增講師</Button>
+        <Button size="sm" className="sm:size-default" onClick={openCreate}><Plus className="h-4 w-4 mr-1 sm:mr-2" />新增</Button>
       </div>
 
       <Card>
@@ -105,49 +105,72 @@ export default function AdminInstructors() {
           ) : !instructors?.length ? (
             <div className="text-center py-8 text-muted-foreground">尚無講師，請新增</div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>頭像</TableHead>
-                  <TableHead>姓名</TableHead>
-                  <TableHead>職稱</TableHead>
-                  <TableHead>簡介</TableHead>
-                  <TableHead>操作</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <>
+              {/* Desktop table */}
+              <div className="hidden md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>頭像</TableHead>
+                      <TableHead>姓名</TableHead>
+                      <TableHead>職稱</TableHead>
+                      <TableHead>簡介</TableHead>
+                      <TableHead>操作</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {instructors.map((inst: any) => (
+                      <TableRow key={inst.id}>
+                        <TableCell>
+                          <Avatar className="h-10 w-10">
+                            <AvatarImage src={inst.avatarUrl} />
+                            <AvatarFallback>{inst.name?.charAt(0)}</AvatarFallback>
+                          </Avatar>
+                        </TableCell>
+                        <TableCell className="font-medium">{inst.name}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">{inst.title || "-"}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground max-w-[250px] truncate">{inst.bio || "-"}</TableCell>
+                        <TableCell>
+                          <div className="flex gap-1">
+                            <Button variant="ghost" size="sm" onClick={() => openEdit(inst)}><Pencil className="h-3 w-3 mr-1" />編輯</Button>
+                            <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => setDeleteTarget(inst)}><Trash2 className="h-3 w-3 mr-1" />刪除</Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              {/* Mobile cards */}
+              <div className="md:hidden divide-y divide-border">
                 {instructors.map((inst: any) => (
-                  <TableRow key={inst.id}>
-                    <TableCell>
-                      <Avatar className="h-10 w-10">
+                  <div key={inst.id} className="p-4 space-y-2">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-10 w-10 shrink-0">
                         <AvatarImage src={inst.avatarUrl} />
                         <AvatarFallback>{inst.name?.charAt(0)}</AvatarFallback>
                       </Avatar>
-                    </TableCell>
-                    <TableCell className="font-medium">{inst.name}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{inst.title || "-"}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground max-w-[250px] truncate">{inst.bio || "-"}</TableCell>
-                    <TableCell>
-                      <div className="flex gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => openEdit(inst)}>
-                          <Pencil className="h-3 w-3 mr-1" />編輯
-                        </Button>
-                        <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => setDeleteTarget(inst)}>
-                          <Trash2 className="h-3 w-3 mr-1" />刪除
-                        </Button>
+                      <div className="min-w-0">
+                        <p className="font-medium text-sm">{inst.name}</p>
+                        <p className="text-xs text-muted-foreground">{inst.title || "-"}</p>
                       </div>
-                    </TableCell>
-                  </TableRow>
+                    </div>
+                    {inst.bio && <p className="text-xs text-muted-foreground line-clamp-2">{inst.bio}</p>}
+                    <div className="flex gap-1.5 pt-1">
+                      <Button variant="outline" size="sm" className="h-7 text-xs flex-1" onClick={() => openEdit(inst)}><Pencil className="h-3 w-3 mr-1" />編輯</Button>
+                      <Button variant="outline" size="sm" className="h-7 text-xs text-destructive" onClick={() => setDeleteTarget(inst)}><Trash2 className="h-3 w-3 mr-1" />刪除</Button>
+                    </div>
+                  </div>
                 ))}
-              </TableBody>
-            </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
 
       {/* 新增/編輯 Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
+        <DialogContent className="w-[calc(100vw-2rem)] sm:w-full">
           <DialogHeader><DialogTitle>{editTarget ? "編輯講師" : "新增講師"}</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div className="flex items-center gap-4">
@@ -186,7 +209,7 @@ export default function AdminInstructors() {
 
       {/* 刪除確認 */}
       <Dialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
-        <DialogContent>
+        <DialogContent className="w-[calc(100vw-2rem)] sm:w-full">
           <DialogHeader><DialogTitle>確認刪除</DialogTitle></DialogHeader>
           <p className="text-muted-foreground">確定要刪除講師「{deleteTarget?.name}」嗎？</p>
           <DialogFooter>

@@ -18,35 +18,35 @@ export default function AdminDashboard() {
   ];
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold">數據中心</h1>
+    <div className="space-y-4 sm:space-y-6">
+      <h1 className="text-xl sm:text-2xl font-bold">數據中心</h1>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
         {statCards.map((card) => (
           <Card key={card.title} className="bg-card border-border">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">{card.title}</CardTitle>
-              <card.icon className={`h-4 w-4 ${card.color}`} />
+            <CardHeader className="flex flex-row items-center justify-between pb-1 sm:pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+              <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">{card.title}</CardTitle>
+              <card.icon className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${card.color}`} />
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
               {statsLoading ? (
-                <Skeleton className="h-8 w-24" />
+                <Skeleton className="h-6 sm:h-8 w-16 sm:w-24" />
               ) : (
-                <div className="text-2xl font-bold">{card.value}</div>
+                <div className="text-lg sm:text-2xl font-bold truncate">{card.value}</div>
               )}
             </CardContent>
           </Card>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         <Card className="bg-card border-border">
           <CardHeader>
             <CardTitle className="text-lg">月度銷售額</CardTitle>
           </CardHeader>
           <CardContent>
             {monthlySales && monthlySales.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={250}>
                 <BarChart data={[...monthlySales].reverse()}>
                   <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.28 0.02 195)" />
                   <XAxis dataKey="month" stroke="oklch(0.65 0.015 195)" fontSize={12} />
@@ -58,7 +58,7 @@ export default function AdminDashboard() {
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-[300px] flex items-center justify-center text-muted-foreground">尚無銷售數據</div>
+              <div className="h-[250px] flex items-center justify-center text-muted-foreground">尚無銷售數據</div>
             )}
           </CardContent>
         </Card>
@@ -69,7 +69,7 @@ export default function AdminDashboard() {
           </CardHeader>
           <CardContent>
             {userGrowth && userGrowth.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={250}>
                 <LineChart data={[...userGrowth].reverse()}>
                   <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.28 0.02 195)" />
                   <XAxis dataKey="month" stroke="oklch(0.65 0.015 195)" fontSize={12} />
@@ -81,7 +81,7 @@ export default function AdminDashboard() {
                 </LineChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-[300px] flex items-center justify-center text-muted-foreground">尚無用戶數據</div>
+              <div className="h-[250px] flex items-center justify-center text-muted-foreground">尚無用戶數據</div>
             )}
           </CardContent>
         </Card>

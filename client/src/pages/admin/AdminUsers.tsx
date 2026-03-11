@@ -59,16 +59,16 @@ export default function AdminUsers() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">用戶管理</h1>
+        <h1 className="text-xl sm:text-2xl font-bold">用戶管理</h1>
         <Badge variant="secondary">{data?.total ?? 0} 位用戶</Badge>
       </div>
 
       {/* Search Bar */}
       <Card className="bg-card border-border">
         <CardContent className="pt-4 pb-4">
-          <div className="flex gap-3">
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -79,10 +79,12 @@ export default function AdminUsers() {
                 className="pl-10"
               />
             </div>
-            <Button onClick={handleSearch} disabled={!searchQuery.trim()}>搜尋</Button>
-            {activeSearch && (
-              <Button variant="outline" onClick={clearSearch}>清除</Button>
-            )}
+            <div className="flex gap-2">
+              <Button className="flex-1 sm:flex-none" onClick={handleSearch} disabled={!searchQuery.trim()}>搜尋</Button>
+              {activeSearch && (
+                <Button variant="outline" className="flex-1 sm:flex-none" onClick={clearSearch}>清除</Button>
+              )}
+            </div>
           </div>
           {activeSearch && (
             <p className="text-xs text-muted-foreground mt-2">
@@ -95,64 +97,111 @@ export default function AdminUsers() {
       {/* Users Table */}
       <Card className="bg-card border-border">
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>ID</TableHead>
-                <TableHead>名稱</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>登入方式</TableHead>
-                <TableHead>LINE</TableHead>
-                <TableHead>角色</TableHead>
-                <TableHead>最後登入</TableHead>
-                <TableHead className="text-right">操作</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">載入中...</TableCell></TableRow>
-              ) : data?.items.length === 0 ? (
-                <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                  {activeSearch ? "未找到符合的用戶" : "尚無用戶"}
-                </TableCell></TableRow>
-              ) : (
-                data?.items.map((user) => (
-                  <TableRow key={user.id} className="cursor-pointer hover:bg-secondary/30" onClick={() => setSelectedUserId(user.id)}>
-                    <TableCell>{user.id}</TableCell>
-                    <TableCell className="font-medium">{user.name ?? "-"}</TableCell>
-                    <TableCell className="text-xs">{user.email ?? "-"}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="text-xs">
-                        {loginMethodLabels[user.loginMethod ?? ""] ?? user.loginMethod ?? "-"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {user.lineUserId ? (
-                        <Badge className="bg-[#06C755]/10 text-[#06C755] border-0 text-xs">已綁定</Badge>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={user.role === "admin" ? "default" : "secondary"}>
-                        {user.role === "admin" ? "管理員" : "學員"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-xs">{new Date(user.lastSignedIn).toLocaleString("zh-TW")}</TableCell>
-                    <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                      <Select value={user.role} onValueChange={(v: "user" | "admin") => updateRole.mutate({ userId: user.id, role: v })}>
-                        <SelectTrigger className="w-24 h-8"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="user">學員</SelectItem>
-                          <SelectItem value="admin">管理員</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+          {/* Desktop table */}
+          <div className="hidden md:block">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>ID</TableHead>
+                  <TableHead>名稱</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>登入方式</TableHead>
+                  <TableHead>LINE</TableHead>
+                  <TableHead>角色</TableHead>
+                  <TableHead>最後登入</TableHead>
+                  <TableHead className="text-right">操作</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">載入中...</TableCell></TableRow>
+                ) : data?.items.length === 0 ? (
+                  <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                    {activeSearch ? "未找到符合的用戶" : "尚無用戶"}
+                  </TableCell></TableRow>
+                ) : (
+                  data?.items.map((user) => (
+                    <TableRow key={user.id} className="cursor-pointer hover:bg-secondary/30" onClick={() => setSelectedUserId(user.id)}>
+                      <TableCell>{user.id}</TableCell>
+                      <TableCell className="font-medium">{user.name ?? "-"}</TableCell>
+                      <TableCell className="text-xs">{user.email ?? "-"}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="text-xs">
+                          {loginMethodLabels[user.loginMethod ?? ""] ?? user.loginMethod ?? "-"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {user.lineUserId ? (
+                          <Badge className="bg-[#06C755]/10 text-[#06C755] border-0 text-xs">已綁定</Badge>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={user.role === "admin" ? "default" : "secondary"}>
+                          {user.role === "admin" ? "管理員" : "學員"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-xs">{new Date(user.lastSignedIn).toLocaleString("zh-TW")}</TableCell>
+                      <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                        <Select value={user.role} onValueChange={(v: "user" | "admin") => updateRole.mutate({ userId: user.id, role: v })}>
+                          <SelectTrigger className="w-24 h-8"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="user">學員</SelectItem>
+                            <SelectItem value="admin">管理員</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+          {/* Mobile cards */}
+          <div className="md:hidden divide-y divide-border">
+            {isLoading ? (
+              <div className="text-center py-8 text-muted-foreground">載入中...</div>
+            ) : data?.items.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                {activeSearch ? "未找到符合的用戶" : "尚無用戶"}
+              </div>
+            ) : (
+              data?.items.map((user) => (
+                <div key={user.id} className="p-4 space-y-2 cursor-pointer active:bg-secondary/20" onClick={() => setSelectedUserId(user.id)}>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="font-medium text-sm">{user.name ?? "-"}</p>
+                      <p className="text-xs text-muted-foreground truncate">{user.email ?? "-"}</p>
+                    </div>
+                    <Badge variant={user.role === "admin" ? "default" : "secondary"} className="shrink-0">
+                      {user.role === "admin" ? "管理員" : "學員"}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge variant="outline" className="text-xs">
+                      {loginMethodLabels[user.loginMethod ?? ""] ?? user.loginMethod ?? "-"}
+                    </Badge>
+                    {user.lineUserId && (
+                      <Badge className="bg-[#06C755]/10 text-[#06C755] border-0 text-xs">LINE 已綁定</Badge>
+                    )}
+                    <span className="text-xs text-muted-foreground ml-auto">
+                      {new Date(user.lastSignedIn).toLocaleDateString("zh-TW")}
+                    </span>
+                  </div>
+                  <div onClick={(e) => e.stopPropagation()}>
+                    <Select value={user.role} onValueChange={(v: "user" | "admin") => updateRole.mutate({ userId: user.id, role: v })}>
+                      <SelectTrigger className="w-full h-8 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="user">學員</SelectItem>
+                        <SelectItem value="admin">管理員</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </CardContent>
       </Card>
 
@@ -166,7 +215,7 @@ export default function AdminUsers() {
 
       {/* User Detail Dialog */}
       <Dialog open={!!selectedUserId} onOpenChange={(open) => { if (!open) setSelectedUserId(null); }}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg w-[calc(100vw-2rem)] sm:w-full max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <User className="h-5 w-5" />

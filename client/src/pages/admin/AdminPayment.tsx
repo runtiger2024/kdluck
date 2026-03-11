@@ -116,13 +116,13 @@ export default function AdminPayment() {
   if (isLoading) return <div className="animate-pulse text-muted-foreground p-8">載入中...</div>;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">支付與 API 設定</h1>
-        <p className="text-muted-foreground mt-1">管理平台的支付方式、第三方 API 金鑰與 LINE 整合設定</p>
+        <h1 className="text-xl sm:text-2xl font-bold">支付與 API 設定</h1>
+        <p className="text-muted-foreground text-xs sm:text-sm mt-1">管理支付方式、第三方 API 金鑰與 LINE 整合</p>
       </div>
 
-      <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4 text-sm">
+      <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 sm:p-4 text-xs sm:text-sm">
         <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 font-medium mb-1">
           <Shield className="h-4 w-4" />
           安全提醒
@@ -136,19 +136,19 @@ export default function AdminPayment() {
       {/* ─── 綠界 ECPay ─── */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                <CreditCard className="h-5 w-5 text-emerald-500" />
+          <div className="flex items-start sm:items-center justify-between gap-2">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0">
+                <CreditCard className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-500" />
               </div>
               <div>
-                <CardTitle className="text-lg">綠界 ECPay</CardTitle>
-                <CardDescription>信用卡、ATM、超商代碼等線上付款</CardDescription>
+                <CardTitle className="text-base sm:text-lg">綠界 ECPay</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">信用卡、ATM、超商等線上付款</CardDescription>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Badge variant={ecpayEnabled ? "default" : "secondary"}>
-                {ecpayEnabled ? "已啟用" : "未啟用"}
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+              <Badge variant={ecpayEnabled ? "default" : "secondary"} className="text-xs">
+                {ecpayEnabled ? "啟用" : "停用"}
               </Badge>
               <Switch checked={ecpayEnabled} onCheckedChange={setEcpayEnabled} />
             </div>
@@ -204,19 +204,19 @@ export default function AdminPayment() {
       {/* ─── 銀行轉帳 ─── */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                <Building className="h-5 w-5 text-blue-500" />
+          <div className="flex items-start sm:items-center justify-between gap-2">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0">
+                <Building className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500" />
               </div>
               <div>
-                <CardTitle className="text-lg">銀行轉帳</CardTitle>
-                <CardDescription>線下匯款，管理員手動確認</CardDescription>
+                <CardTitle className="text-base sm:text-lg">銀行轉帳</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">線下匯款，管理員手動確認</CardDescription>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Badge variant={bankEnabled ? "default" : "secondary"}>
-                {bankEnabled ? "已啟用" : "未啟用"}
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+              <Badge variant={bankEnabled ? "default" : "secondary"} className="text-xs">
+                {bankEnabled ? "啟用" : "停用"}
               </Badge>
               <Switch checked={bankEnabled} onCheckedChange={setBankEnabled} />
             </div>
@@ -247,19 +247,19 @@ export default function AdminPayment() {
       {/* ─── 光貿電子發票 ─── */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-orange-500/10 flex items-center justify-center">
-                <FileText className="h-5 w-5 text-orange-500" />
+          <div className="flex items-start sm:items-center justify-between gap-2">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg bg-orange-500/10 flex items-center justify-center shrink-0">
+                <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-orange-500" />
               </div>
               <div>
-                <CardTitle className="text-lg">光貿電子發票</CardTitle>
-                <CardDescription>自動開立電子發票（光貿 Amego API）</CardDescription>
+                <CardTitle className="text-base sm:text-lg">光貿電子發票</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">自動開立電子發票（光貿 API）</CardDescription>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Badge variant={invoiceEnabled ? "default" : "secondary"}>
-                {invoiceEnabled ? "已啟用" : "未啟用"}
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+              <Badge variant={invoiceEnabled ? "default" : "secondary"} className="text-xs">
+                {invoiceEnabled ? "啟用" : "停用"}
               </Badge>
               <Switch checked={invoiceEnabled} onCheckedChange={setInvoiceEnabled} />
             </div>
@@ -293,19 +293,19 @@ export default function AdminPayment() {
       {/* ─── LINE 整合 ─── */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-green-500/10 flex items-center justify-center">
-                <MessageCircle className="h-5 w-5 text-green-500" />
+          <div className="flex items-start sm:items-center justify-between gap-2">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg bg-green-500/10 flex items-center justify-center shrink-0">
+                <MessageCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-500" />
               </div>
               <div>
-                <CardTitle className="text-lg">LINE 整合</CardTitle>
-                <CardDescription>LINE Login 登入 + LINE Messaging API 推播通知</CardDescription>
+                <CardTitle className="text-base sm:text-lg">LINE 整合</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">LINE Login + Messaging API 推播</CardDescription>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Badge variant={lineLoginEnabled ? "default" : "secondary"}>
-                {lineLoginEnabled ? "已啟用" : "未啟用"}
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+              <Badge variant={lineLoginEnabled ? "default" : "secondary"} className="text-xs">
+                {lineLoginEnabled ? "啟用" : "停用"}
               </Badge>
               <Switch checked={lineLoginEnabled} onCheckedChange={setLineLoginEnabled} />
             </div>

@@ -152,19 +152,16 @@ export default function AdminCourseContent() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="sm" onClick={() => setLocation("/admin/courses")}>
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+        <Button variant="ghost" size="sm" onClick={() => setLocation("/admin/courses")} className="self-start">
           <ArrowLeft className="h-4 w-4 mr-1" />返回
         </Button>
-        <div>
-          <h1 className="text-2xl font-bold">{course?.title ?? "課程內容管理"}</h1>
-          <p className="text-sm text-muted-foreground">管理章節與課時</p>
+        <div className="flex-1">
+          <h1 className="text-xl sm:text-2xl font-bold line-clamp-1">{course?.title ?? "課程內容管理"}</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground">管理章節與課時</p>
         </div>
-      </div>
-
-      <div className="flex justify-end">
-        <Button onClick={openChapterCreate}><Plus className="h-4 w-4 mr-2" />新增章節</Button>
+        <Button onClick={openChapterCreate} className="w-full sm:w-auto"><Plus className="h-4 w-4 mr-2" />新增章節</Button>
       </div>
 
       {chaptersList?.length === 0 && (
@@ -179,13 +176,13 @@ export default function AdminCourseContent() {
         const chLessons = lessonsList?.filter(l => l.chapterId === chapter.id) ?? [];
         return (
           <Card key={chapter.id} className="bg-card border-border">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div className="flex items-center gap-3">
-                <GripVertical className="h-5 w-5 text-muted-foreground" />
-                <CardTitle className="text-lg">{chapter.title}</CardTitle>
-                <Badge variant="secondary">{chLessons.length} 課時</Badge>
+            <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                <GripVertical className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground shrink-0" />
+                <CardTitle className="text-base sm:text-lg truncate">{chapter.title}</CardTitle>
+                <Badge variant="secondary" className="text-xs shrink-0">{chLessons.length} 課時</Badge>
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-1 sm:gap-2 shrink-0">
                 <Button variant="ghost" size="sm" onClick={() => openLessonCreate(chapter.id)}>
                   <Plus className="h-4 w-4" />
                 </Button>
@@ -201,14 +198,14 @@ export default function AdminCourseContent() {
               <CardContent className="pt-0">
                 <div className="space-y-2">
                   {chLessons.sort((a, b) => a.sortOrder - b.sortOrder).map((lesson) => (
-                    <div key={lesson.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/50 hover:bg-secondary/80 transition-colors">
-                      <div className="flex items-center gap-3">
-                        {lesson.videoUrl ? <Video className="h-4 w-4 text-primary" /> : <FileText className="h-4 w-4 text-muted-foreground" />}
-                        <span className="font-medium">{lesson.title}</span>
-                        {lesson.isFreePreview && <Badge variant="outline" className="text-xs">免費試看</Badge>}
-                        {lesson.duration > 0 && <span className="text-xs text-muted-foreground">{Math.floor(lesson.duration / 60)}:{(lesson.duration % 60).toString().padStart(2, "0")}</span>}
+                    <div key={lesson.id} className="flex items-center justify-between p-2 sm:p-3 rounded-lg bg-secondary/50 hover:bg-secondary/80 transition-colors gap-2">
+                      <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                        {lesson.videoUrl ? <Video className="h-4 w-4 text-primary shrink-0" /> : <FileText className="h-4 w-4 text-muted-foreground shrink-0" />}
+                        <span className="font-medium text-sm truncate">{lesson.title}</span>
+                        {lesson.isFreePreview && <Badge variant="outline" className="text-xs shrink-0 hidden sm:inline-flex">免費試看</Badge>}
+                        {lesson.duration > 0 && <span className="text-xs text-muted-foreground shrink-0">{Math.floor(lesson.duration / 60)}:{(lesson.duration % 60).toString().padStart(2, "0")}</span>}
                       </div>
-                      <div className="flex gap-1">
+                      <div className="flex gap-0.5 sm:gap-1 shrink-0">
                         <Button variant="ghost" size="sm" onClick={() => openLessonEdit(lesson)}><Pencil className="h-3 w-3" /></Button>
                         <Button variant="ghost" size="sm" className="text-destructive" onClick={() => { if (confirm("確定刪除？")) deleteLesson.mutate({ id: lesson.id, courseId }); }}>
                           <Trash2 className="h-3 w-3" />
@@ -225,11 +222,11 @@ export default function AdminCourseContent() {
 
       {/* FAQ Section */}
       <Card className="bg-card border-border">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div className="flex items-center gap-3">
-            <HelpCircle className="h-5 w-5 text-primary" />
-            <CardTitle className="text-lg">常見問題 (FAQ)</CardTitle>
-            <Badge variant="secondary">{faqsList?.length ?? 0} 題</Badge>
+        <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <HelpCircle className="h-4 w-4 sm:h-5 sm:w-5 text-primary shrink-0" />
+            <CardTitle className="text-base sm:text-lg">常見問題 (FAQ)</CardTitle>
+            <Badge variant="secondary" className="text-xs">{faqsList?.length ?? 0} 題</Badge>
           </div>
           <Button size="sm" onClick={() => { setEditingFaq(null); setFaqForm({ question: "", answer: "", sortOrder: faqsList?.length ?? 0 }); setFaqDialog(true); }}>
             <Plus className="h-4 w-4 mr-1" />新增
@@ -326,7 +323,7 @@ export default function AdminCourseContent() {
 
       {/* Lesson Dialog */}
       <Dialog open={lessonDialog} onOpenChange={setLessonDialog}>
-        <DialogContent className="max-w-lg bg-card">
+        <DialogContent className="max-w-[95vw] sm:max-w-lg bg-card">
           <DialogHeader><DialogTitle>{editingLesson ? "編輯課時" : "新增課時"}</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div>
@@ -359,7 +356,7 @@ export default function AdminCourseContent() {
               <p className="text-xs text-muted-foreground">可上傳 PDF、PPT、圖片等輔助教材（最大 50MB）</p>
               <Input type="file" accept=".pdf,.ppt,.pptx,.doc,.docx,.zip,.png,.jpg,.jpeg" onChange={handleAttachmentUpload} />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div>
                 <Label>時長 (秒)</Label>
                 <Input type="number" value={lessonForm.duration} onChange={e => setLessonForm(f => ({ ...f, duration: parseInt(e.target.value) || 0 }))} />

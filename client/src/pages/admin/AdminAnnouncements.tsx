@@ -78,10 +78,10 @@ export default function AdminAnnouncements() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold flex items-center gap-2"><Megaphone className="h-6 w-6" />公告管理</h1>
-        <Button onClick={openCreate}><Plus className="h-4 w-4 mr-2" />新增公告</Button>
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-2"><Megaphone className="h-5 w-5 sm:h-6 sm:w-6" />公告管理</h1>
+        <Button onClick={openCreate} className="w-full sm:w-auto"><Plus className="h-4 w-4 mr-2" />新增公告</Button>
       </div>
 
       {isLoading ? (
@@ -96,22 +96,22 @@ export default function AdminAnnouncements() {
           {data.items.map(item => (
             <Card key={item.id} className={`bg-card border-border ${!item.isActive ? "opacity-50" : ""}`}>
               <CardContent className="p-4">
-                <div className="flex items-start justify-between gap-4">
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-4">
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-1">
                       {item.isPinned && <Pin className="h-3.5 w-3.5 text-primary" />}
-                      <h3 className="font-semibold">{item.title}</h3>
-                      <Badge variant={typeBadgeVariant[item.type] ?? "secondary"}>{typeLabels[item.type] ?? item.type}</Badge>
-                      {!item.isActive && <Badge variant="outline">已停用</Badge>}
+                      <h3 className="font-semibold text-sm sm:text-base">{item.title}</h3>
+                      <Badge variant={typeBadgeVariant[item.type] ?? "secondary"} className="text-xs">{typeLabels[item.type] ?? item.type}</Badge>
+                      {!item.isActive && <Badge variant="outline" className="text-xs">已停用</Badge>}
                     </div>
-                    <p className="text-sm text-muted-foreground line-clamp-2">{item.content}</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2">{item.content}</p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      建立時間：{new Date(item.createdAt).toLocaleString("zh-TW")}
-                      {item.startAt && ` · 開始：${new Date(item.startAt).toLocaleString("zh-TW")}`}
-                      {item.endAt && ` · 結束：${new Date(item.endAt).toLocaleString("zh-TW")}`}
+                      {new Date(item.createdAt).toLocaleDateString("zh-TW")}
+                      {item.startAt && ` ~ ${new Date(item.startAt).toLocaleDateString("zh-TW")}`}
+                      {item.endAt && ` ~ ${new Date(item.endAt).toLocaleDateString("zh-TW")}`}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex items-center gap-1 sm:gap-2 shrink-0">
                     <Switch checked={item.isActive} onCheckedChange={() => toggleActive(item)} />
                     <Button variant="ghost" size="sm" onClick={() => openEdit(item)}><Pencil className="h-4 w-4" /></Button>
                     <Button variant="ghost" size="sm" className="text-destructive" onClick={() => { if (confirm("確定刪除此公告？")) deleteMutation.mutate({ id: item.id }); }}><Trash2 className="h-4 w-4" /></Button>
@@ -124,12 +124,12 @@ export default function AdminAnnouncements() {
       )}
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-[95vw] sm:max-w-lg">
           <DialogHeader><DialogTitle>{editingId ? "編輯公告" : "新增公告"}</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div><Label>標題</Label><Input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="公告標題" /></div>
             <div><Label>內容</Label><Textarea value={form.content} onChange={e => setForm(f => ({ ...f, content: e.target.value }))} rows={4} placeholder="公告內容..." /></div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div>
                 <Label>類型</Label>
                 <Select value={form.type} onValueChange={v => setForm(f => ({ ...f, type: v }))}>
@@ -149,7 +149,7 @@ export default function AdminAnnouncements() {
                 </div>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div><Label>開始時間（選填）</Label><Input type="datetime-local" value={form.startAt} onChange={e => setForm(f => ({ ...f, startAt: e.target.value }))} /></div>
               <div><Label>結束時間（選填）</Label><Input type="datetime-local" value={form.endAt} onChange={e => setForm(f => ({ ...f, endAt: e.target.value }))} /></div>
             </div>

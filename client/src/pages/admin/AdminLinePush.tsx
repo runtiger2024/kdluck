@@ -70,49 +70,49 @@ export default function AdminLinePush() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">LINE 推播</h1>
-          <p className="text-muted-foreground mt-1">透過 LINE Messaging API 發送推播通知</p>
+          <h1 className="text-xl sm:text-2xl font-bold">LINE 推播</h1>
+          <p className="text-muted-foreground text-xs sm:text-sm mt-1">透過 LINE Messaging API 發送推播通知</p>
         </div>
-        <Button onClick={() => setSendDialogOpen(true)}>
+        <Button onClick={() => setSendDialogOpen(true)} className="w-full sm:w-auto">
           <Send className="h-4 w-4 mr-2" />發送推播
         </Button>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-3 gap-2 sm:gap-4">
         <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>LINE 綁定用戶</CardDescription>
-            <CardTitle className="text-2xl">{lineUsers?.length ?? 0}</CardTitle>
+          <CardHeader className="pb-2 p-3 sm:p-6">
+            <CardDescription className="text-xs sm:text-sm">LINE 綁定</CardDescription>
+            <CardTitle className="text-lg sm:text-2xl">{lineUsers?.length ?? 0}</CardTitle>
           </CardHeader>
         </Card>
         <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>總推播次數</CardDescription>
-            <CardTitle className="text-2xl">{history?.total ?? 0}</CardTitle>
+          <CardHeader className="pb-2 p-3 sm:p-6">
+            <CardDescription className="text-xs sm:text-sm">推播次數</CardDescription>
+            <CardTitle className="text-lg sm:text-2xl">{history?.total ?? 0}</CardTitle>
           </CardHeader>
         </Card>
         <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>通知模板</CardDescription>
-            <CardTitle className="text-2xl">{templates?.length ?? 0}</CardTitle>
+          <CardHeader className="pb-2 p-3 sm:p-6">
+            <CardDescription className="text-xs sm:text-sm">通知模板</CardDescription>
+            <CardTitle className="text-lg sm:text-2xl">{templates?.length ?? 0}</CardTitle>
           </CardHeader>
         </Card>
       </div>
 
-      <div className="rounded-lg bg-muted/50 p-4 text-sm text-muted-foreground">
+      <div className="rounded-lg bg-muted/50 p-3 sm:p-4 text-xs sm:text-sm text-muted-foreground">
         <p className="font-medium text-foreground mb-2">LINE Messaging API 設定說明</p>
         <p>請至 <a href="/admin/payment" className="text-primary underline font-medium">支付與 API 設定</a> 頁面設定 LINE Messaging API 的 <strong>Channel Access Token</strong>。</p>
         <p className="mt-2">取得方式：前往 <a href="https://developers.line.biz/console/" target="_blank" rel="noopener" className="text-primary underline">LINE Developers Console</a> → 選擇 Messaging API Channel → Channel Access Token</p>
       </div>
 
       <Tabs defaultValue="history">
-        <TabsList>
-          <TabsTrigger value="history"><History className="h-4 w-4 mr-1" />推播歷史</TabsTrigger>
-          <TabsTrigger value="templates"><MessageSquare className="h-4 w-4 mr-1" />通知模板</TabsTrigger>
-          <TabsTrigger value="users"><Users className="h-4 w-4 mr-1" />LINE 用戶</TabsTrigger>
+        <TabsList className="flex flex-wrap h-auto gap-1 p-1">
+          <TabsTrigger value="history" className="text-xs sm:text-sm"><History className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1" />歷史</TabsTrigger>
+          <TabsTrigger value="templates" className="text-xs sm:text-sm"><MessageSquare className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1" />模板</TabsTrigger>
+          <TabsTrigger value="users" className="text-xs sm:text-sm"><Users className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1" />用戶</TabsTrigger>
         </TabsList>
 
         <TabsContent value="history">
@@ -124,6 +124,24 @@ export default function AdminLinePush() {
                 <div className="text-center py-8 text-muted-foreground">尚無推播記錄</div>
               ) : (
                 <>
+                  {/* 手機端卡片式 */}
+                  <div className="sm:hidden space-y-3">
+                    {history.items.map((item: any) => (
+                      <div key={item.id} className="p-3 rounded-lg border space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-medium">{targetLabel(item.targetType)}</span>
+                          {statusBadge(item.status)}
+                        </div>
+                        <p className="text-sm line-clamp-2">{item.messageContent}</p>
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <span>發送：{item.sentCount ?? "-"} 筆</span>
+                          <span>{new Date(item.createdAt).toLocaleString("zh-TW")}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  {/* 桌面端表格 */}
+                  <div className="hidden sm:block">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -148,6 +166,7 @@ export default function AdminLinePush() {
                       ))}
                     </TableBody>
                   </Table>
+                  </div>
                   {history.total > 20 && (
                     <div className="flex justify-center gap-2 mt-4">
                       <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>上一頁</Button>
@@ -169,15 +188,15 @@ export default function AdminLinePush() {
               ) : (
                 <div className="space-y-3">
                   {templates.map((t: any) => (
-                    <div key={t.id} className="flex items-center justify-between p-3 rounded-lg border">
-                      <div>
+                    <div key={t.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg border gap-2">
+                      <div className="min-w-0">
                         <p className="font-medium text-sm">{t.templateName}</p>
-                        <p className="text-xs text-muted-foreground mt-1 max-w-[400px] truncate">{t.templateBody}</p>
+                        <p className="text-xs text-muted-foreground mt-1 line-clamp-2 sm:max-w-[400px] sm:truncate">{t.templateBody}</p>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 shrink-0">
                         <Badge variant={t.isActive ? "default" : "secondary"}>{t.isActive ? "啟用" : "停用"}</Badge>
                         <Button variant="outline" size="sm" onClick={() => { applyTemplate(t.templateBody); setSendDialogOpen(true); }}>
-                          使用此模板
+                          使用
                         </Button>
                       </div>
                     </div>
@@ -195,28 +214,44 @@ export default function AdminLinePush() {
               {!lineUsers?.length ? (
                 <div className="text-center py-8 text-muted-foreground">尚無 LINE 綁定用戶</div>
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>用戶名稱</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>LINE User ID</TableHead>
-                      <TableHead>註冊時間</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+                <>
+                  {/* 手機端卡片式 */}
+                  <div className="sm:hidden space-y-3">
                     {lineUsers.map((u: any) => (
-                      <TableRow key={u.id}>
-                        <TableCell className="font-medium">{u.name || "-"}</TableCell>
-                        <TableCell className="text-sm">{u.email || "-"}</TableCell>
-                        <TableCell className="font-mono text-xs">{u.lineUserId}</TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
-                          {new Date(u.createdAt).toLocaleDateString("zh-TW")}
-                        </TableCell>
-                      </TableRow>
+                      <div key={u.id} className="p-3 rounded-lg border space-y-1">
+                        <p className="font-medium text-sm">{u.name || "-"}</p>
+                        <p className="text-xs text-muted-foreground">{u.email || "-"}</p>
+                        <p className="text-xs font-mono text-muted-foreground truncate">{u.lineUserId}</p>
+                        <p className="text-xs text-muted-foreground">{new Date(u.createdAt).toLocaleDateString("zh-TW")}</p>
+                      </div>
                     ))}
-                  </TableBody>
-                </Table>
+                  </div>
+                  {/* 桌面端表格 */}
+                  <div className="hidden sm:block">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>用戶名稱</TableHead>
+                          <TableHead>Email</TableHead>
+                          <TableHead>LINE User ID</TableHead>
+                          <TableHead>註冊時間</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {lineUsers.map((u: any) => (
+                          <TableRow key={u.id}>
+                            <TableCell className="font-medium">{u.name || "-"}</TableCell>
+                            <TableCell className="text-sm">{u.email || "-"}</TableCell>
+                            <TableCell className="font-mono text-xs">{u.lineUserId}</TableCell>
+                            <TableCell className="text-xs text-muted-foreground">
+                              {new Date(u.createdAt).toLocaleDateString("zh-TW")}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </>
               )}
             </CardContent>
           </Card>
@@ -225,7 +260,7 @@ export default function AdminLinePush() {
 
       {/* 發送推播 Dialog */}
       <Dialog open={sendDialogOpen} onOpenChange={setSendDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-[95vw] sm:max-w-lg">
           <DialogHeader><DialogTitle>發送 LINE 推播</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">

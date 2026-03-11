@@ -58,13 +58,13 @@ export default function AdminNotifications() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">通知推送</h1>
-        <p className="text-muted-foreground text-sm mt-1">向用戶發送站內通知、LINE 推播或 Email</p>
+        <h1 className="text-xl sm:text-2xl font-bold">通知推送</h1>
+        <p className="text-muted-foreground text-xs sm:text-sm mt-1">向用戶發送站內通知、LINE 推播或 Email</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* Send Form */}
         <Card>
           <CardHeader>

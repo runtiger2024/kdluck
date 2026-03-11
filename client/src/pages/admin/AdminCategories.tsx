@@ -62,13 +62,13 @@ export default function AdminCategories() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">分類管理</h1>
-          <p className="text-muted-foreground mt-1">管理課程分類</p>
+          <h1 className="text-xl sm:text-2xl font-bold">分類管理</h1>
+          <p className="text-muted-foreground text-sm mt-1">管理課程分類</p>
         </div>
-        <Button onClick={openCreate}><Plus className="h-4 w-4 mr-2" />新增分類</Button>
+        <Button onClick={openCreate} className="w-full sm:w-auto"><Plus className="h-4 w-4 mr-2" />新增分類</Button>
       </div>
 
       <Card>
@@ -81,44 +81,68 @@ export default function AdminCategories() {
           ) : !categories?.length ? (
             <div className="text-center py-8 text-muted-foreground">尚無分類，請新增</div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>名稱</TableHead>
-                  <TableHead>Slug</TableHead>
-                  <TableHead>描述</TableHead>
-                  <TableHead>排序</TableHead>
-                  <TableHead>操作</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <>
+              {/* 手機端卡片式 */}
+              <div className="sm:hidden space-y-3">
                 {categories.map((cat: any) => (
-                  <TableRow key={cat.id}>
-                    <TableCell className="font-medium">{cat.name}</TableCell>
-                    <TableCell className="font-mono text-xs">{cat.slug}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">{cat.description || "-"}</TableCell>
-                    <TableCell>{cat.sortOrder}</TableCell>
-                    <TableCell>
+                  <div key={cat.id} className="p-3 rounded-lg border space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">{cat.name}</span>
+                      <span className="text-xs font-mono text-muted-foreground">{cat.slug}</span>
+                    </div>
+                    {cat.description && <p className="text-xs text-muted-foreground">{cat.description}</p>}
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">排序：{cat.sortOrder}</span>
                       <div className="flex gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => openEdit(cat)}>
-                          <Pencil className="h-3 w-3 mr-1" />編輯
-                        </Button>
-                        <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => setDeleteTarget(cat)}>
-                          <Trash2 className="h-3 w-3 mr-1" />刪除
-                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => openEdit(cat)}><Pencil className="h-3 w-3" /></Button>
+                        <Button variant="ghost" size="sm" className="text-destructive" onClick={() => setDeleteTarget(cat)}><Trash2 className="h-3 w-3" /></Button>
                       </div>
-                    </TableCell>
-                  </TableRow>
+                    </div>
+                  </div>
                 ))}
-              </TableBody>
-            </Table>
+              </div>
+              {/* 桌面端表格 */}
+              <div className="hidden sm:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>名稱</TableHead>
+                      <TableHead>Slug</TableHead>
+                      <TableHead>描述</TableHead>
+                      <TableHead>排序</TableHead>
+                      <TableHead>操作</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {categories.map((cat: any) => (
+                      <TableRow key={cat.id}>
+                        <TableCell className="font-medium">{cat.name}</TableCell>
+                        <TableCell className="font-mono text-xs">{cat.slug}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">{cat.description || "-"}</TableCell>
+                        <TableCell>{cat.sortOrder}</TableCell>
+                        <TableCell>
+                          <div className="flex gap-1">
+                            <Button variant="ghost" size="sm" onClick={() => openEdit(cat)}>
+                              <Pencil className="h-3 w-3 mr-1" />編輯
+                            </Button>
+                            <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => setDeleteTarget(cat)}>
+                              <Trash2 className="h-3 w-3 mr-1" />刪除
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
 
       {/* 新增/編輯 Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-[95vw] sm:max-w-lg">
           <DialogHeader><DialogTitle>{editTarget ? "編輯分類" : "新增分類"}</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
@@ -149,7 +173,7 @@ export default function AdminCategories() {
 
       {/* 刪除確認 */}
       <Dialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
-        <DialogContent>
+        <DialogContent className="max-w-[95vw] sm:max-w-md">
           <DialogHeader><DialogTitle>確認刪除</DialogTitle></DialogHeader>
           <p className="text-muted-foreground">確定要刪除分類「{deleteTarget?.name}」嗎？</p>
           <DialogFooter>

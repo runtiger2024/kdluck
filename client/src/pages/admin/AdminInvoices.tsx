@@ -87,14 +87,14 @@ export default function AdminInvoices() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">發票管理</h1>
-          <p className="text-muted-foreground mt-1">光貿電子發票開立與管理</p>
+          <h1 className="text-xl sm:text-2xl font-bold">發票管理</h1>
+          <p className="text-muted-foreground text-xs sm:text-sm mt-1">光貿電子發票開立與管理</p>
         </div>
-        <Button onClick={() => setIssueDialogOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />手動開立
+        <Button size="sm" className="sm:size-default" onClick={() => setIssueDialogOpen(true)}>
+          <Plus className="h-4 w-4 mr-1 sm:mr-2" />開立
         </Button>
       </div>
 
@@ -121,44 +121,63 @@ export default function AdminInvoices() {
             <div className="text-center py-8 text-muted-foreground">尚無發票記錄</div>
           ) : (
             <>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>訂單編號</TableHead>
-                    <TableHead>發票號碼</TableHead>
-                    <TableHead>買方</TableHead>
-                    <TableHead>金額</TableHead>
-                    <TableHead>狀態</TableHead>
-                    <TableHead>日期</TableHead>
-                    <TableHead>操作</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {data.items.map((inv: any) => (
-                    <TableRow key={inv.id}>
-                      <TableCell className="font-mono text-xs">{inv.orderNo}</TableCell>
-                      <TableCell className="font-mono">{inv.invoiceNumber || "-"}</TableCell>
-                      <TableCell>{inv.buyerName}</TableCell>
-                      <TableCell>${inv.totalAmount}</TableCell>
-                      <TableCell>{statusBadge(inv.status)}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
-                        {new Date(inv.createdAt).toLocaleDateString("zh-TW")}
-                      </TableCell>
-                      <TableCell>
-                        {inv.status === "issued" && (
-                          <Button
-                            variant="ghost" size="sm"
-                            className="text-destructive hover:text-destructive"
-                            onClick={() => { setSelectedInvoice(inv); setVoidDialogOpen(true); }}
-                          >
-                            <Ban className="h-3 w-3 mr-1" />作廢
-                          </Button>
-                        )}
-                      </TableCell>
+              {/* Desktop table */}
+              <div className="hidden md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>訂單編號</TableHead>
+                      <TableHead>發票號碼</TableHead>
+                      <TableHead>買方</TableHead>
+                      <TableHead>金額</TableHead>
+                      <TableHead>狀態</TableHead>
+                      <TableHead>日期</TableHead>
+                      <TableHead>操作</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {data.items.map((inv: any) => (
+                      <TableRow key={inv.id}>
+                        <TableCell className="font-mono text-xs">{inv.orderNo}</TableCell>
+                        <TableCell className="font-mono">{inv.invoiceNumber || "-"}</TableCell>
+                        <TableCell>{inv.buyerName}</TableCell>
+                        <TableCell>${inv.totalAmount}</TableCell>
+                        <TableCell>{statusBadge(inv.status)}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">{new Date(inv.createdAt).toLocaleDateString("zh-TW")}</TableCell>
+                        <TableCell>
+                          {inv.status === "issued" && (
+                            <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => { setSelectedInvoice(inv); setVoidDialogOpen(true); }}><Ban className="h-3 w-3 mr-1" />作廢</Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              {/* Mobile cards */}
+              <div className="md:hidden divide-y divide-border">
+                {data.items.map((inv: any) => (
+                  <div key={inv.id} className="p-4 space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-xs font-mono text-muted-foreground">{inv.orderNo}</p>
+                        <p className="text-sm font-medium mt-0.5">{inv.invoiceNumber || "待開立"}</p>
+                      </div>
+                      {statusBadge(inv.status)}
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">{inv.buyerName}</span>
+                      <span className="font-medium">${inv.totalAmount}</span>
+                    </div>
+                    <div className="flex items-center justify-between pt-1">
+                      <span className="text-xs text-muted-foreground">{new Date(inv.createdAt).toLocaleDateString("zh-TW")}</span>
+                      {inv.status === "issued" && (
+                        <Button variant="outline" size="sm" className="h-7 text-xs text-destructive" onClick={() => { setSelectedInvoice(inv); setVoidDialogOpen(true); }}><Ban className="h-3 w-3 mr-1" />作廢</Button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
               {data.total > 20 && (
                 <div className="flex justify-center gap-2 mt-4">
                   <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>上一頁</Button>
@@ -173,10 +192,10 @@ export default function AdminInvoices() {
 
       {/* 開立發票 Dialog */}
       <Dialog open={issueDialogOpen} onOpenChange={setIssueDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader><DialogTitle>手動開立發票</DialogTitle></DialogHeader>
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div className="space-y-2">
                 <Label>訂單編號</Label>
                 <Input value={issueForm.orderNo} onChange={e => setIssueForm(f => ({ ...f, orderNo: e.target.value }))} />
@@ -186,7 +205,7 @@ export default function AdminInvoices() {
                 <Input type="number" value={issueForm.orderId || ""} onChange={e => setIssueForm(f => ({ ...f, orderId: parseInt(e.target.value) || 0 }))} />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div className="space-y-2">
                 <Label>品名</Label>
                 <Input value={issueForm.itemName} onChange={e => setIssueForm(f => ({ ...f, itemName: e.target.value }))} placeholder="線上課程" />
@@ -196,7 +215,7 @@ export default function AdminInvoices() {
                 <Input type="number" value={issueForm.amount || ""} onChange={e => setIssueForm(f => ({ ...f, amount: parseFloat(e.target.value) || 0 }))} />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div className="space-y-2">
                 <Label>買方統編</Label>
                 <Input value={issueForm.buyerIdentifier} onChange={e => setIssueForm(f => ({ ...f, buyerIdentifier: e.target.value }))} placeholder="個人免填" />
@@ -210,7 +229,7 @@ export default function AdminInvoices() {
               <Label>買方 Email</Label>
               <Input value={issueForm.buyerEmail} onChange={e => setIssueForm(f => ({ ...f, buyerEmail: e.target.value }))} />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div className="space-y-2">
                 <Label>載具類別</Label>
                 <Select value={issueForm.carrierType} onValueChange={v => setIssueForm(f => ({ ...f, carrierType: v }))}>
@@ -243,7 +262,7 @@ export default function AdminInvoices() {
 
       {/* 作廢確認 Dialog */}
       <Dialog open={voidDialogOpen} onOpenChange={setVoidDialogOpen}>
-        <DialogContent>
+        <DialogContent className="w-[calc(100vw-2rem)] sm:w-full">
           <DialogHeader><DialogTitle>確認作廢發票</DialogTitle></DialogHeader>
           <p className="text-muted-foreground">
             確定要作廢發票 <strong>{selectedInvoice?.invoiceNumber}</strong> 嗎？此操作無法復原。

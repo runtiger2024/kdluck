@@ -37,10 +37,10 @@ export default function AdminReviews() {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">評價管理</h1>
-        <p className="text-muted-foreground mt-1">查看與管理學員課程評價</p>
+        <h1 className="text-xl sm:text-2xl font-bold">評價管理</h1>
+        <p className="text-muted-foreground text-xs sm:text-sm mt-1">查看與管理學員課程評價</p>
       </div>
 
       <Card>
@@ -54,42 +54,54 @@ export default function AdminReviews() {
             <div className="text-center py-8 text-muted-foreground">尚無評價</div>
           ) : (
             <>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>用戶</TableHead>
-                    <TableHead>課程</TableHead>
-                    <TableHead>評分</TableHead>
-                    <TableHead>評論</TableHead>
-                    <TableHead>日期</TableHead>
-                    <TableHead>操作</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {data.items.map((review: any) => (
-                    <TableRow key={review.id}>
-                      <TableCell className="font-medium">{review.userName || `用戶 #${review.userId}`}</TableCell>
-                      <TableCell>{review.courseTitle || `課程 #${review.courseId}`}</TableCell>
-                      <TableCell>{renderStars(review.rating)}</TableCell>
-                      <TableCell className="max-w-[300px] truncate text-sm text-muted-foreground">
-                        {review.comment || "-"}
-                      </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
-                        {new Date(review.createdAt).toLocaleDateString("zh-TW")}
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="ghost" size="sm"
-                          className="text-destructive hover:text-destructive"
-                          onClick={() => setDeleteTarget(review)}
-                        >
-                          <Trash2 className="h-3 w-3 mr-1" />刪除
-                        </Button>
-                      </TableCell>
+              {/* Desktop table */}
+              <div className="hidden md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>用戶</TableHead>
+                      <TableHead>課程</TableHead>
+                      <TableHead>評分</TableHead>
+                      <TableHead>評論</TableHead>
+                      <TableHead>日期</TableHead>
+                      <TableHead>操作</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {data.items.map((review: any) => (
+                      <TableRow key={review.id}>
+                        <TableCell className="font-medium">{review.userName || `用戶 #${review.userId}`}</TableCell>
+                        <TableCell>{review.courseTitle || `課程 #${review.courseId}`}</TableCell>
+                        <TableCell>{renderStars(review.rating)}</TableCell>
+                        <TableCell className="max-w-[300px] truncate text-sm text-muted-foreground">{review.comment || "-"}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">{new Date(review.createdAt).toLocaleDateString("zh-TW")}</TableCell>
+                        <TableCell>
+                          <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => setDeleteTarget(review)}><Trash2 className="h-3 w-3 mr-1" />刪除</Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              {/* Mobile cards */}
+              <div className="md:hidden divide-y divide-border">
+                {data.items.map((review: any) => (
+                  <div key={review.id} className="p-4 space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium">{review.userName || `用戶 #${review.userId}`}</p>
+                        <p className="text-xs text-muted-foreground truncate">{review.courseTitle || `課程 #${review.courseId}`}</p>
+                      </div>
+                      <div className="shrink-0">{renderStars(review.rating)}</div>
+                    </div>
+                    {review.comment && <p className="text-xs text-muted-foreground line-clamp-2">{review.comment}</p>}
+                    <div className="flex items-center justify-between pt-1">
+                      <span className="text-xs text-muted-foreground">{new Date(review.createdAt).toLocaleDateString("zh-TW")}</span>
+                      <Button variant="outline" size="sm" className="h-7 text-xs text-destructive" onClick={() => setDeleteTarget(review)}><Trash2 className="h-3 w-3 mr-1" />刪除</Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
               {data.total > 20 && (
                 <div className="flex justify-center gap-2 mt-4">
                   <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>上一頁</Button>
@@ -103,7 +115,7 @@ export default function AdminReviews() {
       </Card>
 
       <Dialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
-        <DialogContent>
+        <DialogContent className="w-[calc(100vw-2rem)] sm:w-full">
           <DialogHeader><DialogTitle>確認刪除評價</DialogTitle></DialogHeader>
           <p className="text-muted-foreground">
             確定要刪除此評價嗎？此操作無法復原。

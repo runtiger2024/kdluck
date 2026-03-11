@@ -68,22 +68,22 @@ export default function AdminSettings() {
   };
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold">系統設定</h1>
+    <div className="space-y-4 sm:space-y-6">
+      <h1 className="text-xl sm:text-2xl font-bold">系統設定</h1>
 
       <Tabs defaultValue="site">
-        <TabsList>
-          <TabsTrigger value="site"><Settings className="h-4 w-4 mr-1" />全站配置</TabsTrigger>
-          <TabsTrigger value="categories">分類管理</TabsTrigger>
-          <TabsTrigger value="instructors">講師管理</TabsTrigger>
-          <TabsTrigger value="notifications"><Bell className="h-4 w-4 mr-1" />通知模板</TabsTrigger>
+        <TabsList className="flex flex-wrap h-auto gap-1 p-1">
+          <TabsTrigger value="site" className="text-xs sm:text-sm"><Settings className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1" />全站</TabsTrigger>
+          <TabsTrigger value="categories" className="text-xs sm:text-sm">分類</TabsTrigger>
+          <TabsTrigger value="instructors" className="text-xs sm:text-sm">講師</TabsTrigger>
+          <TabsTrigger value="notifications" className="text-xs sm:text-sm"><Bell className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1" />模板</TabsTrigger>
         </TabsList>
 
         <TabsContent value="site" className="space-y-4 mt-4">
           <Card className="bg-card border-border">
             <CardHeader><CardTitle>基本資訊</CardTitle></CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <Label>網站名稱</Label>
                   <Input value={siteForm.site_name} onChange={e => setSiteForm(f => ({ ...f, site_name: e.target.value }))} />
@@ -97,7 +97,7 @@ export default function AdminSettings() {
                 <Label>網站描述</Label>
                 <Textarea value={siteForm.site_description} onChange={e => setSiteForm(f => ({ ...f, site_description: e.target.value }))} rows={2} />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <Label>客服 Email</Label>
                   <Input value={siteForm.contact_email} onChange={e => setSiteForm(f => ({ ...f, contact_email: e.target.value }))} />
@@ -124,7 +124,7 @@ export default function AdminSettings() {
           <Card className="bg-card border-border">
             <CardHeader><CardTitle>新增分類</CardTitle></CardHeader>
             <CardContent>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                 <Input placeholder="分類名稱" value={catForm.name} onChange={e => setCatForm(f => ({ ...f, name: e.target.value }))} />
                 <Input placeholder="Slug (英文)" value={catForm.slug} onChange={e => setCatForm(f => ({ ...f, slug: e.target.value }))} />
                 <Button onClick={() => { if (catForm.name && catForm.slug) createCategory.mutate(catForm); else toast.error("請填寫名稱與 Slug"); }}>新增</Button>
@@ -158,7 +158,7 @@ export default function AdminSettings() {
             <CardHeader><CardTitle>新增講師</CardTitle></CardHeader>
             <CardContent>
               <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <Input placeholder="講師姓名" value={instForm.name} onChange={e => setInstForm(f => ({ ...f, name: e.target.value }))} />
                   <Input placeholder="頭銜" value={instForm.title} onChange={e => setInstForm(f => ({ ...f, title: e.target.value }))} />
                 </div>

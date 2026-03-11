@@ -110,61 +110,88 @@ export default function AdminCourses() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">課程管理</h1>
-        <Button onClick={openCreate}><Plus className="h-4 w-4 mr-2" />新增課程</Button>
+        <h1 className="text-xl sm:text-2xl font-bold">課程管理</h1>
+        <Button size="sm" className="sm:size-default" onClick={openCreate}><Plus className="h-4 w-4 mr-1 sm:mr-2" /><span className="hidden sm:inline">新增</span>課程</Button>
       </div>
 
       <Card className="bg-card border-border">
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>課程名稱</TableHead>
-                <TableHead>價格</TableHead>
-                <TableHead>狀態</TableHead>
-                <TableHead>學員數</TableHead>
-                <TableHead>評分</TableHead>
-                <TableHead className="text-right">操作</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">載入中...</TableCell></TableRow>
-              ) : data?.items.length === 0 ? (
-                <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">尚無課程</TableCell></TableRow>
-              ) : (
-                data?.items.map((course) => (
-                  <TableRow key={course.id}>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{course.title}</div>
-                        <div className="text-xs text-muted-foreground">{course.slug}</div>
-                      </div>
-                    </TableCell>
-                    <TableCell>NT$ {course.price}</TableCell>
-                    <TableCell><Badge variant={statusMap[course.status]?.variant}>{statusMap[course.status]?.label}</Badge></TableCell>
-                    <TableCell>{course.enrollmentCount}</TableCell>
-                    <TableCell>{course.avgRating ? `${course.avgRating} (${course.ratingCount})` : "-"}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button variant="ghost" size="sm" onClick={() => setLocation(`/admin/courses/${course.id}/content`)}>
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => openEdit(course)}>
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm" className="text-destructive" onClick={() => { if (confirm("確定刪除此課程？")) deleteMutation.mutate({ id: course.id }); }}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+          {/* Desktop table */}
+          <div className="hidden md:block">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>課程名稱</TableHead>
+                  <TableHead>價格</TableHead>
+                  <TableHead>狀態</TableHead>
+                  <TableHead>學員數</TableHead>
+                  <TableHead>評分</TableHead>
+                  <TableHead className="text-right">操作</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">載入中...</TableCell></TableRow>
+                ) : data?.items.length === 0 ? (
+                  <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">尚無課程</TableCell></TableRow>
+                ) : (
+                  data?.items.map((course) => (
+                    <TableRow key={course.id}>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{course.title}</div>
+                          <div className="text-xs text-muted-foreground">{course.slug}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell>NT$ {course.price}</TableCell>
+                      <TableCell><Badge variant={statusMap[course.status]?.variant}>{statusMap[course.status]?.label}</Badge></TableCell>
+                      <TableCell>{course.enrollmentCount}</TableCell>
+                      <TableCell>{course.avgRating ? `${course.avgRating} (${course.ratingCount})` : "-"}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <Button variant="ghost" size="sm" onClick={() => setLocation(`/admin/courses/${course.id}/content`)}><Eye className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="sm" onClick={() => openEdit(course)}><Pencil className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="sm" className="text-destructive" onClick={() => { if (confirm("確定刪除此課程？")) deleteMutation.mutate({ id: course.id }); }}><Trash2 className="h-4 w-4" /></Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+          {/* Mobile cards */}
+          <div className="md:hidden divide-y divide-border">
+            {isLoading ? (
+              <div className="text-center py-8 text-muted-foreground">載入中...</div>
+            ) : data?.items.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">尚無課程</div>
+            ) : (
+              data?.items.map((course) => (
+                <div key={course.id} className="p-4 space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="font-medium text-sm truncate">{course.title}</p>
+                      <p className="text-xs text-muted-foreground">{course.slug}</p>
+                    </div>
+                    <Badge variant={statusMap[course.status]?.variant} className="shrink-0">{statusMap[course.status]?.label}</Badge>
+                  </div>
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                    <span className="font-medium text-foreground">NT$ {course.price}</span>
+                    <span>{course.enrollmentCount} 學員</span>
+                    <span>{course.avgRating ? `${course.avgRating} 分` : "無評分"}</span>
+                  </div>
+                  <div className="flex gap-1.5 pt-1">
+                    <Button variant="outline" size="sm" className="h-7 text-xs flex-1" onClick={() => setLocation(`/admin/courses/${course.id}/content`)}><Eye className="h-3 w-3 mr-1" />內容</Button>
+                    <Button variant="outline" size="sm" className="h-7 text-xs flex-1" onClick={() => openEdit(course)}><Pencil className="h-3 w-3 mr-1" />編輯</Button>
+                    <Button variant="outline" size="sm" className="h-7 text-xs text-destructive" onClick={() => { if (confirm("確定刪除此課程？")) deleteMutation.mutate({ id: course.id }); }}><Trash2 className="h-3 w-3" /></Button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </CardContent>
       </Card>
 
@@ -177,12 +204,12 @@ export default function AdminCourses() {
       )}
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto bg-card">
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto bg-card w-[calc(100vw-2rem)] sm:w-full">
           <DialogHeader>
             <DialogTitle>{editingCourse ? "編輯課程" : "新增課程"}</DialogTitle>
           </DialogHeader>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            <div className="sm:col-span-2">
               <Label>課程名稱 *</Label>
               <Input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="例：Python 入門到精通" />
             </div>
@@ -242,11 +269,11 @@ export default function AdminCourses() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="col-span-2">
+            <div className="sm:col-span-2">
               <Label>課程描述</Label>
               <Textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={4} />
             </div>
-            <div className="col-span-2">
+            <div className="sm:col-span-2">
               <Label className="flex items-center gap-2 mb-2"><Image className="h-4 w-4" />課程封面圖片</Label>
               {form.coverImageUrl ? (
                 <div className="mb-2 relative group">
@@ -265,7 +292,7 @@ export default function AdminCourses() {
               </div>
               <p className="text-xs text-muted-foreground mt-1">建議尺寸 1280x720，最大 10MB，支援 JPG/PNG/WebP</p>
             </div>
-            <div className="col-span-2">
+            <div className="sm:col-span-2">
               <Label>預覽影片 URL</Label>
               <Input value={form.previewVideoUrl} onChange={e => setForm(f => ({ ...f, previewVideoUrl: e.target.value }))} placeholder="https://..." />
             </div>
