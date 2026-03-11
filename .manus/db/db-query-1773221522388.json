@@ -1,0 +1,14 @@
+{
+  "query": "SELECT 'users' as t, COUNT(*) as c FROM users; ",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 28JPo3Vw26mPY6V.root --database XBhqXuJ2WiY8ShtDj5vvMz --execute SELECT 'users' as t, COUNT(*) as c FROM users; ",
+  "rows": [
+    {
+      "t": "users",
+      "c": "1"
+    }
+  ],
+  "messages": [],
+  "stdout": "t\tc\nusers\t1\n",
+  "stderr": "",
+  "execution_time_ms": 1528
+}

@@ -1,0 +1,24 @@
+{
+  "query": "SELECT (SELECT COUNT(*) FROM categories) as categories_count, (SELECT COUNT(*) FROM instructors) as instructors_count, (SELECT COUNT(*) FROM courses) as courses_count, (SELECT COUNT(*) FROM chapters) as chapters_count, (SELECT COUNT(*) FROM lessons) as lessons_count, (SELECT COUNT(*) FROM orders) as orders_count, (SELECT COUNT(*) FROM enrollments) as enrollments_count, (SELECT COUNT(*) FROM reviews) as reviews_count, (SELECT COUNT(*) FROM coupons) as coupons_count, (SELECT COUNT(*) FROM users) as users_count, (SELECT COUNT(*) FROM site_config) as site_config_count, (SELECT COUNT(*) FROM notification_templates) as notif_count;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 28JPo3Vw26mPY6V.root --database XBhqXuJ2WiY8ShtDj5vvMz --execute SELECT (SELECT COUNT(*) FROM categories) as categories_count, (SELECT COUNT(*) FROM instructors) as instructors_count, (SELECT COUNT(*) FROM courses) as courses_count, (SELECT COUNT(*) FROM chapters) as chapters_count, (SELECT COUNT(*) FROM lessons) as lessons_count, (SELECT COUNT(*) FROM orders) as orders_count, (SELECT COUNT(*) FROM enrollments) as enrollments_count, (SELECT COUNT(*) FROM reviews) as reviews_count, (SELECT COUNT(*) FROM coupons) as coupons_count, (SELECT COUNT(*) FROM users) as users_count, (SELECT COUNT(*) FROM site_config) as site_config_count, (SELECT COUNT(*) FROM notification_templates) as notif_count;",
+  "rows": [
+    {
+      "categories_count": "0",
+      "instructors_count": "0",
+      "courses_count": "0",
+      "chapters_count": "0",
+      "lessons_count": "0",
+      "orders_count": "0",
+      "enrollments_count": "0",
+      "reviews_count": "0",
+      "coupons_count": "0",
+      "users_count": "1",
+      "site_config_count": "24",
+      "notif_count": "3"
+    }
+  ],
+  "messages": [],
+  "stdout": "categories_count\tinstructors_count\tcourses_count\tchapters_count\tlessons_count\torders_count\tenrollments_count\treviews_count\tcoupons_count\tusers_count\tsite_config_count\tnotif_count\n0\t0\t0\t0\t0\t0\t0\t0\t0\t1\t24\t3\n",
+  "stderr": "",
+  "execution_time_ms": 1533
+}

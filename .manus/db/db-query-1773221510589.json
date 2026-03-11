@@ -1,0 +1,66 @@
+{
+  "query": "SELECT 'categories' as tbl, COUNT(*) as cnt FROM categories UNION ALL SELECT 'instructors', COUNT(*) FROM instructors UNION ALL SELECT 'courses', COUNT(*) FROM courses UNION ALL SELECT 'chapters', COUNT(*) FROM chapters UNION ALL SELECT 'lessons', COUNT(*) FROM lessons UNION ALL SELECT 'orders', COUNT(*) FROM orders UNION ALL SELECT 'enrollments', COUNT(*) FROM enrollments UNION ALL SELECT 'reviews', COUNT(*) FROM reviews UNION ALL SELECT 'coupons', COUNT(*) FROM coupons UNION ALL SELECT 'users', COUNT(*) FROM users UNION ALL SELECT 'site_config', COUNT(*) FROM site_config UNION ALL SELECT 'notification_templates', COUNT(*) FROM notification_templates UNION ALL SELECT 'invoices', COUNT(*) FROM invoices UNION ALL SELECT 'line_push_history', COUNT(*) FROM line_push_history;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 28JPo3Vw26mPY6V.root --database XBhqXuJ2WiY8ShtDj5vvMz --execute SELECT 'categories' as tbl, COUNT(*) as cnt FROM categories UNION ALL SELECT 'instructors', COUNT(*) FROM instructors UNION ALL SELECT 'courses', COUNT(*) FROM courses UNION ALL SELECT 'chapters', COUNT(*) FROM chapters UNION ALL SELECT 'lessons', COUNT(*) FROM lessons UNION ALL SELECT 'orders', COUNT(*) FROM orders UNION ALL SELECT 'enrollments', COUNT(*) FROM enrollments UNION ALL SELECT 'reviews', COUNT(*) FROM reviews UNION ALL SELECT 'coupons', COUNT(*) FROM coupons UNION ALL SELECT 'users', COUNT(*) FROM users UNION ALL SELECT 'site_config', COUNT(*) FROM site_config UNION ALL SELECT 'notification_templates', COUNT(*) FROM notification_templates UNION ALL SELECT 'invoices', COUNT(*) FROM invoices UNION ALL SELECT 'line_push_history', COUNT(*) FROM line_push_history;",
+  "rows": [
+    {
+      "tbl": "chapters",
+      "cnt": "0"
+    },
+    {
+      "tbl": "categories",
+      "cnt": "0"
+    },
+    {
+      "tbl": "instructors",
+      "cnt": "0"
+    },
+    {
+      "tbl": "courses",
+      "cnt": "0"
+    },
+    {
+      "tbl": "lessons",
+      "cnt": "0"
+    },
+    {
+      "tbl": "orders",
+      "cnt": "0"
+    },
+    {
+      "tbl": "enrollments",
+      "cnt": "0"
+    },
+    {
+      "tbl": "users",
+      "cnt": "1"
+    },
+    {
+      "tbl": "coupons",
+      "cnt": "0"
+    },
+    {
+      "tbl": "reviews",
+      "cnt": "0"
+    },
+    {
+      "tbl": "site_config",
+      "cnt": "24"
+    },
+    {
+      "tbl": "notification_templates",
+      "cnt": "3"
+    },
+    {
+      "tbl": "line_push_history",
+      "cnt": "0"
+    },
+    {
+      "tbl": "invoices",
+      "cnt": "0"
+    }
+  ],
+  "messages": [],
+  "stdout": "tbl\tcnt\nchapters\t0\ncategories\t0\ninstructors\t0\ncourses\t0\nlessons\t0\norders\t0\nenrollments\t0\nusers\t1\ncoupons\t0\nreviews\t0\nsite_config\t24\nnotification_templates\t3\nline_push_history\t0\ninvoices\t0\n",
+  "stderr": "",
+  "execution_time_ms": 1558
+}
