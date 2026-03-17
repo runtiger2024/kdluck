@@ -271,6 +271,16 @@ const orderRouter = router({
     // Check if already enrolled
     const enrolled = await db.isEnrolled(ctx.user.id, input.courseId);
     if (enrolled) throw new TRPCError({ code: "BAD_REQUEST", message: "您已購買此課程" });
+    // 檢查支付方式開關狀態
+    if (input.paymentMethod !== "free") {
+      const siteConf = await db.getSiteConfig();
+      if (input.paymentMethod === "ecpay" && siteConf.ecpay_enabled !== "true") {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "綠界支付目前已停用，請選擇其他付款方式" });
+      }
+      if (input.paymentMethod === "bank_transfer" && siteConf.bank_transfer_enabled !== "true") {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "銀行轉帳目前已停用，請選擇其他付款方式" });
+      }
+    }
 
     const course = await db.getCourseById(input.courseId);
     if (!course) throw new TRPCError({ code: "NOT_FOUND", message: "Course not found" });
@@ -562,6 +572,14 @@ const siteConfigRouter = router({
       bankCode: config.bank_code || "",
       bankAccount: config.bank_account || "",
       bankHolder: config.bank_holder || "",
+    };
+  }),
+  // 公開 API：只回傳支付方式開關狀態（不含敏感 API keys）
+  getPaymentMethods: publicProcedure.query(async () => {
+    const config = await db.getSiteConfig();
+    return {
+      ecpay: config.ecpay_enabled === "true",
+      bankTransfer: config.bank_transfer_enabled === "true",
     };
   }),
   update: adminProcedure.input(z.object({

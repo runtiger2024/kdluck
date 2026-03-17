@@ -235,3 +235,19 @@
 - [x] 分類管理：手機端卡片式 + Dialog 優化
 - [x] 發票管理：手機端排版優化
 - [x] 講師管理：手機端排版優化
+
+## 課程內容保護
+- [x] 前端：課程播放頁面禁止文字選取與複製（useContentProtection hook）
+- [x] 前端：影片播放器禁用右鍵選單、禁用下載按鈕（controlsList="nodownload" + disablePictureInPicture）
+- [x] 前端：禁用鍵盤快捷鍵（Ctrl+S/U/P/F12/C/A）
+- [x] 前端：禁用拖曳影片元素（覆蓋層防止拖曳）
+- [x] 前端：加入浮水印保護（VideoWatermark 元件，顯示用戶識別資訊）
+
+## 管理後台支付方式開關
+- [x] 後端：新增 getPaymentMethods 公開 API（只回傳開關狀態，不含 API keys）
+- [x] 後端：訂單建立 API 檢查支付方式是否啟用（ecpay/bank_transfer 分別檢查）
+- [x] 前端：管理後台支付設定頁面已有支付方式開關 UI（Switch 元件）
+- [x] 前端：結帳頁面根據開關動態顯示/隐藏支付選項
+- [x] 前端：全部停用時顯示提示訊息並禁用確認按鈕
+- [x] 前端：自動選擇第一個可用的付款方式
+- [x] 撰寫 Vitest 測試（169 tests passed）

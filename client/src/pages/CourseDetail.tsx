@@ -25,7 +25,11 @@ export default function CourseDetail() {
   const [expandedChapter, setExpandedChapter] = useState<number | null>(null);
   const [orderDialog, setOrderDialog] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"ecpay" | "bank_transfer" | "free">("ecpay");
+  const { data: paymentMethods } = trpc.siteConfig.getPaymentMethods.useQuery();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // 當支付方式資料載入後，自動選擇第一個可用的付款方式
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const [paymentMethodInitialized, setPaymentMethodInitialized] = useState(false);
   const [couponCode, setCouponCode] = useState("");
   const [reviewText, setReviewText] = useState("");
   const [reviewRating, setReviewRating] = useState(5);
@@ -49,6 +53,16 @@ export default function CourseDetail() {
 
   const utils = trpc.useUtils();
   const createOrder = trpc.order.create.useMutation();
+
+  // 自動選擇第一個可用的付款方式
+  if (paymentMethods && !paymentMethodInitialized) {
+    if (!paymentMethods.ecpay && paymentMethods.bankTransfer) {
+      setPaymentMethod("bank_transfer");
+    } else if (paymentMethods.ecpay) {
+      setPaymentMethod("ecpay");
+    }
+    setPaymentMethodInitialized(true);
+  }
 
   const createReview = trpc.review.create.useMutation({
     onSuccess: () => { utils.review.listByCourse.invalidate({ courseId: course?.id ?? 0 }); setReviewText(""); toast.success("評價已提交"); },
@@ -456,13 +470,23 @@ export default function CourseDetail() {
             </div>
             <div>
               <Label>付款方式</Label>
-              <Select value={paymentMethod} onValueChange={(v: any) => setPaymentMethod(v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ecpay">綠界 ECPay（信用卡/ATM/超商）</SelectItem>
-                  <SelectItem value="bank_transfer">銀行轉帳</SelectItem>
-                </SelectContent>
-              </Select>
+              {paymentMethods && !paymentMethods.ecpay && !paymentMethods.bankTransfer ? (
+                <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-sm text-destructive mt-2">
+                  目前所有付款方式暫時停用，請稍後再試或聯繫客服。
+                </div>
+              ) : (
+                <Select value={paymentMethod} onValueChange={(v: any) => setPaymentMethod(v)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {(!paymentMethods || paymentMethods.ecpay) && (
+                      <SelectItem value="ecpay">綠界 ECPay（信用卡/ATM/超商）</SelectItem>
+                    )}
+                    {(!paymentMethods || paymentMethods.bankTransfer) && (
+                      <SelectItem value="bank_transfer">銀行轉帳</SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
             {paymentMethod === "ecpay" && (
               <div className="p-3 rounded-lg bg-primary/5 border border-primary/20 text-sm">
@@ -484,7 +508,7 @@ export default function CourseDetail() {
             )}
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setOrderDialog(false)} disabled={isSubmitting}>取消</Button>
-              <Button onClick={submitOrder} disabled={isSubmitting}>
+              <Button onClick={submitOrder} disabled={isSubmitting || (paymentMethods != null && !paymentMethods.ecpay && !paymentMethods.bankTransfer)}>
                 {isSubmitting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />處理中...</> : paymentMethod === "ecpay" ? "前往綠界付款" : "確認下單"}
               </Button>
             </div>

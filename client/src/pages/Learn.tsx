@@ -5,6 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
+import { VideoWatermark } from "@/components/VideoWatermark";
+import { useContentProtection } from "@/hooks/useContentProtection";
 import { ArrowLeft, Play, CheckCircle, Lock, ChevronDown, ChevronUp, StickyNote, Plus, Trash2, Clock, X } from "lucide-react";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useParams, useLocation } from "wouter";
@@ -21,6 +23,9 @@ export default function Learn() {
   const [showNotes, setShowNotes] = useState(false);
   const [noteContent, setNoteContent] = useState("");
   const [editingNoteId, setEditingNoteId] = useState<number | null>(null);
+
+  // ── 內容保護 ──────────────────────────────────────────
+  const protectedContainerRef = useContentProtection(true);
 
   const { data: course } = trpc.course.getBySlug.useQuery({ slug: params.slug ?? "" });
   const { data: enrollment } = trpc.enrollment.check.useQuery({ courseId: course?.id ?? 0 }, { enabled: !!course && !!user });
@@ -72,6 +77,15 @@ export default function Learn() {
     const interval = setInterval(saveProgress, 15000);
     return () => clearInterval(interval);
   }, [saveProgress]);
+
+  // ── 影片額外保護：禁止拖曳 ──────────────────────────────
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    const preventDrag = (e: DragEvent) => e.preventDefault();
+    video.addEventListener("dragstart", preventDrag);
+    return () => video.removeEventListener("dragstart", preventDrag);
+  }, [signedUrl?.url]);
 
   const formatTimestamp = (seconds: number) => {
     const m = Math.floor(seconds / 60);
@@ -139,7 +153,12 @@ export default function Learn() {
   };
 
   return (
-    <div className="h-screen bg-background flex flex-col">
+    // ── 保護容器：禁止選取文字 ────────────────────────────
+    <div
+      ref={protectedContainerRef}
+      className="h-screen bg-background flex flex-col"
+      style={{ userSelect: "none", WebkitUserSelect: "none" } as React.CSSProperties}
+    >
       {/* Top bar */}
       <header className="h-14 border-b border-border bg-card/50 backdrop-blur-sm flex items-center px-4 gap-4 shrink-0">
         <Button variant="ghost" size="sm" onClick={() => { saveProgress(); setLocation(`/courses/${params.slug}`); }}>
@@ -165,19 +184,25 @@ export default function Learn() {
       <div className="flex-1 flex overflow-hidden">
         {/* Video player */}
         <div className="flex-1 flex flex-col">
-          <div className="flex-1 bg-black flex items-center justify-center">
+          <div className="flex-1 bg-black flex items-center justify-center relative">
             {signedUrl?.url ? (
-              <video
-                ref={videoRef}
-                key={signedUrl.url}
-                src={signedUrl.url}
-                controls
-                controlsList="nodownload"
-                onContextMenu={e => e.preventDefault()}
-                onEnded={saveProgress}
-                onPause={saveProgress}
-                className="w-full h-full"
-              />
+              <>
+                <video
+                  ref={videoRef}
+                  key={signedUrl.url}
+                  src={signedUrl.url}
+                  controls
+                  controlsList="nodownload nofullscreen noremoteplayback"
+                  disablePictureInPicture
+                  onContextMenu={e => e.preventDefault()}
+                  onEnded={saveProgress}
+                  onPause={saveProgress}
+                  className="w-full h-full"
+                  style={{ pointerEvents: "auto" }}
+                />
+                {/* 浮水印 */}
+                <VideoWatermark enabled={true} />
+              </>
             ) : (
               <div className="text-muted-foreground text-center">
                 <Play className="h-16 w-16 mx-auto mb-4 opacity-30" />
@@ -188,14 +213,19 @@ export default function Learn() {
           {currentLesson && (
             <div className="p-4 border-t border-border bg-card/30">
               <h2 className="font-bold text-lg">{currentLesson.title}</h2>
-              {currentLesson.description && <p className="text-sm text-muted-foreground mt-1">{currentLesson.description}</p>}
+              {currentLesson.description && (
+                <p className="text-sm text-muted-foreground mt-1">{currentLesson.description}</p>
+              )}
             </div>
           )}
         </div>
 
-        {/* Notes Panel */}
+        {/* Notes Panel — 筆記區允許文字選取 */}
         {showNotes && (
-          <aside className="w-80 border-l border-border bg-card/30 shrink-0 flex flex-col">
+          <aside
+            className="w-80 border-l border-border bg-card/30 shrink-0 flex flex-col"
+            style={{ userSelect: "text", WebkitUserSelect: "text" } as React.CSSProperties}
+          >
             <div className="p-4 border-b border-border flex items-center justify-between">
               <h3 className="font-semibold flex items-center gap-2">
                 <StickyNote className="h-4 w-4" />課堂筆記

@@ -1773,3 +1773,58 @@ describe("Admin - Pending Review Count", () => {
     await expect(caller.order.pendingReviewCount()).rejects.toThrow();
   });
 });
+
+// ─── Payment Method Switch Tests ───
+describe("SiteConfig - getPaymentMethods", () => {
+  it("returns payment method status as public API", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    const result = await caller.siteConfig.getPaymentMethods();
+    // mockSiteConfig has bank_transfer_enabled: "true", ecpay_enabled not set → false
+    expect(result.bankTransfer).toBe(true);
+    expect(result.ecpay).toBe(false);
+  });
+
+  it("is accessible without authentication (public procedure)", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    await expect(caller.siteConfig.getPaymentMethods()).resolves.not.toThrow();
+  });
+
+  it("is also accessible when authenticated", async () => {
+    const caller = appRouter.createCaller(createUserContext());
+    await expect(caller.siteConfig.getPaymentMethods()).resolves.not.toThrow();
+  });
+});
+
+describe("Order Create - Payment Method Switch Enforcement", () => {
+  it("rejects ecpay order when ecpay_enabled is false in config", async () => {
+    const caller = appRouter.createCaller(createUserContext());
+    // Override getSiteConfig mock to return ecpay disabled
+    const db = await import("./db");
+    vi.mocked(db.getSiteConfig).mockResolvedValueOnce({
+      ecpay_enabled: "false",
+      bank_transfer_enabled: "true",
+    } as any);
+    await expect(
+      caller.order.create({ courseId: 1, paymentMethod: "ecpay" })
+    ).rejects.toThrow("綠界支付目前已停用");
+  });
+
+  it("rejects bank_transfer order when bank_transfer_enabled is false in config", async () => {
+    const caller = appRouter.createCaller(createUserContext());
+    const db = await import("./db");
+    vi.mocked(db.getSiteConfig).mockResolvedValueOnce({
+      ecpay_enabled: "true",
+      bank_transfer_enabled: "false",
+    } as any);
+    await expect(
+      caller.order.create({ courseId: 1, paymentMethod: "bank_transfer" })
+    ).rejects.toThrow("銀行轉帳目前已停用");
+  });
+
+  it("allows free course regardless of payment switches", async () => {
+    const caller = appRouter.createCaller(createUserContext());
+    // Free course (courseId: 2, price: 0.00) should bypass payment switch check
+    const result = await caller.order.create({ courseId: 2, paymentMethod: "free" });
+    expect(result).toBeDefined();
+  });
+});
