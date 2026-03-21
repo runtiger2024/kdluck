@@ -421,6 +421,59 @@ export async function reviewPaymentProof(
   }).where(eq(orders.orderNo, orderNo));
 }
 
+export async function batchReviewProofs(
+  orderNos: string[],
+  approved: boolean,
+  reviewerId: number,
+  reviewNote?: string
+) {
+  const db = await getDb();
+  if (!db) return { success: 0, failed: 0 };
+  let success = 0;
+  let failed = 0;
+  for (const orderNo of orderNos) {
+    try {
+      await db.update(orders).set({
+        reviewStatus: approved ? "approved" : "rejected",
+        reviewedAt: new Date(),
+        reviewedBy: reviewerId,
+        reviewNote: reviewNote || null,
+        ...(approved ? { paymentStatus: "paid", paidAt: new Date() } : {}),
+      }).where(and(eq(orders.orderNo, orderNo), eq(orders.reviewStatus, "pending_review")));
+      success++;
+    } catch {
+      failed++;
+    }
+  }
+  return { success, failed };
+}
+
+export async function exportAllOrders(status?: string) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions: any[] = [];
+  if (status && status !== "all") conditions.push(eq(orders.paymentStatus, status as any));
+  const where = conditions.length > 0 ? and(...conditions) : undefined;
+  return db.select().from(orders).where(where).orderBy(desc(orders.createdAt));
+}
+
+export async function exportAllUsers() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({
+    id: users.id,
+    name: users.name,
+    email: users.email,
+    phone: users.phone,
+    role: users.role,
+    city: users.city,
+    occupation: users.occupation,
+    company: users.company,
+    lineUserId: users.lineUserId,
+    createdAt: users.createdAt,
+  }).from(users).orderBy(desc(users.createdAt));
+}
+
 export async function getOrdersWithPendingReview(page = 1, limit = 20) {
   const db = await getDb();
   if (!db) return { items: [], total: 0 };

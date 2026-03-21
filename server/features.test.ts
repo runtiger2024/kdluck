@@ -109,6 +109,9 @@ vi.mock("./db", () => {
     reviewPaymentProof: vi.fn(),
     getOrdersWithPendingReview: vi.fn().mockResolvedValue({ items: [], total: 0 }),
     getPendingReviewCount: vi.fn().mockResolvedValue(3),
+    batchReviewProofs: vi.fn().mockResolvedValue({ success: 2, failed: 0 }),
+    exportAllOrders: vi.fn().mockResolvedValue([{ orderNo: "ORD-001", userId: 1, courseId: 1, amount: "1990.00", paymentMethod: "bank_transfer", paymentStatus: "paid", reviewStatus: "approved", createdAt: new Date(), paidAt: new Date() }]),
+    exportAllUsers: vi.fn().mockResolvedValue([{ id: 1, name: "Test", email: "test@example.com", phone: null, role: "user", city: null, occupation: null, company: null, lineUserId: "U123", createdAt: new Date() }]),
     createEnrollment: vi.fn(),
     isEnrolled: vi.fn().mockResolvedValue(false),
     getEnrolledCourses: vi.fn().mockResolvedValue([]),
@@ -1826,5 +1829,89 @@ describe("Order Create - Payment Method Switch Enforcement", () => {
     // Free course (courseId: 2, price: 0.00) should bypass payment switch check
     const result = await caller.order.create({ courseId: 2, paymentMethod: "free" });
     expect(result).toBeDefined();
+  });
+});
+
+// ─── Batch Review Tests ───────────────────────────────────────────────────────
+describe("Order Batch Review", () => {
+  it("allows admin to batch approve multiple orders", async () => {
+    const caller = appRouter.createCaller(createAdminContext());
+    const db = await import("./db");
+    vi.mocked(db.batchReviewProofs).mockResolvedValueOnce({ success: 2, failed: 0 });
+    const result = await caller.order.batchReview({
+      orderNos: ["ORD-001", "ORD-002"],
+      approved: true,
+    });
+    expect(result.success).toBe(2);
+    expect(result.failed).toBe(0);
+  });
+
+  it("allows admin to batch reject multiple orders with note", async () => {
+    const caller = appRouter.createCaller(createAdminContext());
+    const db = await import("./db");
+    vi.mocked(db.batchReviewProofs).mockResolvedValueOnce({ success: 3, failed: 1 });
+    const result = await caller.order.batchReview({
+      orderNos: ["ORD-001", "ORD-002", "ORD-003", "ORD-004"],
+      approved: false,
+      reviewNote: "憑證不清晰",
+    });
+    expect(result.success).toBe(3);
+    expect(result.failed).toBe(1);
+  });
+
+  it("rejects batch review for non-admin users", async () => {
+    const caller = appRouter.createCaller(createUserContext());
+    await expect(
+      caller.order.batchReview({ orderNos: ["ORD-001"], approved: true })
+    ).rejects.toThrow();
+  });
+
+  it("rejects batch review with empty orderNos", async () => {
+    const caller = appRouter.createCaller(createAdminContext());
+    await expect(
+      caller.order.batchReview({ orderNos: [], approved: true })
+    ).rejects.toThrow();
+  });
+});
+
+// ─── Export Tests ─────────────────────────────────────────────────────────────
+describe("Order Export", () => {
+  it("allows admin to export all orders", async () => {
+    const caller = appRouter.createCaller(createAdminContext());
+    const result = await caller.order.exportOrders({});
+    expect(Array.isArray(result)).toBe(true);
+    expect(result.length).toBeGreaterThan(0);
+    expect(result[0]).toHaveProperty("orderNo");
+    expect(result[0]).toHaveProperty("amount");
+    expect(result[0]).toHaveProperty("paymentStatus");
+  });
+
+  it("allows admin to export orders filtered by status", async () => {
+    const caller = appRouter.createCaller(createAdminContext());
+    const result = await caller.order.exportOrders({ status: "paid" });
+    expect(Array.isArray(result)).toBe(true);
+  });
+
+  it("rejects order export for non-admin users", async () => {
+    const caller = appRouter.createCaller(createUserContext());
+    await expect(caller.order.exportOrders({})).rejects.toThrow();
+  });
+});
+
+describe("User Export", () => {
+  it("allows admin to export all users", async () => {
+    const caller = appRouter.createCaller(createAdminContext());
+    const result = await caller.user.exportUsers();
+    expect(Array.isArray(result)).toBe(true);
+    expect(result.length).toBeGreaterThan(0);
+    expect(result[0]).toHaveProperty("id");
+    expect(result[0]).toHaveProperty("email");
+    expect(result[0]).toHaveProperty("role");
+    expect(result[0]).toHaveProperty("lineUserId");
+  });
+
+  it("rejects user export for non-admin users", async () => {
+    const caller = appRouter.createCaller(createUserContext());
+    await expect(caller.user.exportUsers()).rejects.toThrow();
   });
 });

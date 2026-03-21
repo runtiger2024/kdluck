@@ -43,7 +43,7 @@ export default function MemberNotifications() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">通知中心</h1>
           <p className="text-muted-foreground text-sm mt-1">
@@ -51,7 +51,7 @@ export default function MemberNotifications() {
           </p>
         </div>
         {unreadCount > 0 && (
-          <Button variant="outline" size="sm" onClick={() => markAllRead.mutate()}>
+          <Button variant="outline" size="sm" onClick={() => markAllRead.mutate()} className="self-start sm:self-auto">
             <CheckCheck className="h-4 w-4 mr-2" />
             全部標為已讀
           </Button>
@@ -96,10 +96,10 @@ export default function MemberNotifications() {
                 }
               }}
             >
-              <CardContent className="p-4">
-                <div className="flex items-start gap-4">
+              <CardContent className="p-3 sm:p-4">
+                <div className="flex items-start gap-2 sm:gap-4">
                   {/* Unread indicator */}
-                  <div className="mt-1.5">
+                  <div className="mt-1.5 shrink-0">
                     {!n.isRead ? (
                       <span className="h-2.5 w-2.5 rounded-full bg-orange-500 block" />
                     ) : (
@@ -109,7 +109,7 @@ export default function MemberNotifications() {
 
                   {/* Content */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex flex-wrap items-center gap-2 mb-1">
                       <Badge variant="secondary" className={`text-xs ${typeColors[n.type] || ""}`}>
                         {typeLabels[n.type] || n.type}
                       </Badge>
@@ -120,11 +120,31 @@ export default function MemberNotifications() {
                     <h3 className={`text-sm font-medium ${!n.isRead ? "text-foreground" : "text-muted-foreground"}`}>
                       {n.title}
                     </h3>
-                    <p className="text-sm text-muted-foreground mt-1">{n.content}</p>
+                    <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{n.content}</p>
+
+                    {/* 手機端操作按鈕（常駐顯示） */}
+                    <div className="flex gap-1 mt-2 sm:hidden">
+                      {n.link && (
+                        <Button variant="ghost" size="sm" className="h-7 text-xs px-2">
+                          <ExternalLink className="h-3 w-3 mr-1" />查看
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 text-xs px-2 text-muted-foreground hover:text-destructive"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteNotif.mutate({ id: n.id });
+                        }}
+                      >
+                        <Trash2 className="h-3 w-3 mr-1" />刪除
+                      </Button>
+                    </div>
                   </div>
 
-                  {/* Actions */}
-                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                  {/* 桌面端操作按鈕（hover 顯示） */}
+                  <div className="hidden sm:flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                     {n.link && (
                       <Button variant="ghost" size="icon" className="h-8 w-8">
                         <ExternalLink className="h-4 w-4" />
@@ -152,23 +172,13 @@ export default function MemberNotifications() {
       {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-2 pt-4">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={page <= 1}
-            onClick={() => setPage(p => p - 1)}
-          >
+          <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <span className="text-sm text-muted-foreground">
             第 {page} / {totalPages} 頁
           </span>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={page >= totalPages}
-            onClick={() => setPage(p => p + 1)}
-          >
+          <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>

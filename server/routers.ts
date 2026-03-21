@@ -449,6 +449,33 @@ const orderRouter = router({
   pendingReviewCount: adminProcedure.query(async () => {
     return { count: await db.getPendingReviewCount() };
   }),
+  // Admin: 批量審核憑證
+  batchReview: adminProcedure.input(z.object({
+    orderNos: z.array(z.string()).min(1),
+    approved: z.boolean(),
+    reviewNote: z.string().optional(),
+  })).mutation(async ({ input, ctx }) => {
+    const result = await db.batchReviewProofs(input.orderNos, input.approved, ctx.user.id, input.reviewNote);
+    // 對通過的訂單開通課程
+    if (input.approved) {
+      for (const orderNo of input.orderNos) {
+        try {
+          const order = await db.getOrderByNo(orderNo);
+          if (order) {
+            await db.createEnrollment({ userId: order.userId, courseId: order.courseId });
+            if (order.couponId) await db.incrementCouponUsage(order.couponId);
+          }
+        } catch { /* skip */ }
+      }
+    }
+    return result;
+  }),
+  // Admin: 匯出訂單數據
+  exportOrders: adminProcedure.input(z.object({
+    status: z.string().optional(),
+  }).optional()).query(async ({ input }) => {
+    return db.exportAllOrders(input?.status);
+  }),
 });
 
 // ─── Enrollment Router ───
@@ -681,6 +708,10 @@ const userRouter = router({
       createdAt: user.createdAt,
       lastSignedIn: user.lastSignedIn,
     };
+  }),
+  // Admin: 匯出用戶數據
+  exportUsers: adminProcedure.query(async () => {
+    return db.exportAllUsers();
   }),
   // 公開帳號查詢（透過 Email 查詢帳號狀態，不需登入）
   lookupByEmail: publicProcedure.input(z.object({

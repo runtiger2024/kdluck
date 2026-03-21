@@ -9,11 +9,31 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { toast } from "sonner";
 import {
-  Search, User, Mail, Phone, Link2, ShoppingCart, BookOpen, Clock, Shield,
+  Search, User, Mail, Phone, Link2, ShoppingCart, BookOpen, Clock, Shield, Download,
 } from "lucide-react";
+
+// CSV 匯出工具
+function exportToCSV(data: any[], filename: string) {
+  if (!data.length) { toast.error("沒有可匯出的資料"); return; }
+  const headers = Object.keys(data[0]);
+  const rows = data.map(row =>
+    headers.map(h => {
+      const v = row[h];
+      if (v == null) return "";
+      const s = v instanceof Date ? v.toLocaleString("zh-TW") : String(v);
+      return s.includes(",") || s.includes('"') || s.includes("\n") ? `"${s.replace(/"/g, '""')}"` : s;
+    }).join(",")
+  );
+  const csv = "\uFEFF" + [headers.join(","), ...rows].join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
 
 const loginMethodLabels: Record<string, string> = {
   manus: "Manus",
@@ -58,11 +78,43 @@ export default function AdminUsers() {
     setPage(1);
   };
 
+  const { refetch: refetchExport } = trpc.user.exportUsers.useQuery(
+    undefined,
+    { enabled: false }
+  );
+
+  const handleExport = useCallback(async () => {
+    const result = await refetchExport();
+    if (result.data && result.data.length > 0) {
+      const rows = result.data.map((u: any) => ({
+        ID: u.id,
+        名稱: u.name ?? "",
+        Email: u.email ?? "",
+        電話: u.phone ?? "",
+        角色: u.role,
+        城市: u.city ?? "",
+        職業: u.occupation ?? "",
+        公司: u.company ?? "",
+        LINE綁定: u.lineUserId ? "是" : "否",
+        註冊時間: u.createdAt ? new Date(u.createdAt).toLocaleString("zh-TW") : "",
+      }));
+      exportToCSV(rows, `用戶匯出_${new Date().toLocaleDateString("zh-TW").replace(/\//g, "-")}.csv`);
+    } else {
+      toast.error("沒有可匯出的資料");
+    }
+  }, [refetchExport]);
+
   return (
     <div className="space-y-4 sm:space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-xl sm:text-2xl font-bold">用戶管理</h1>
-        <Badge variant="secondary">{data?.total ?? 0} 位用戶</Badge>
+        <div className="flex items-center gap-2">
+          <Badge variant="secondary">{data?.total ?? 0} 位用戶</Badge>
+          <Button variant="outline" size="sm" onClick={handleExport} className="flex items-center gap-1.5">
+            <Download className="h-4 w-4" />
+            <span className="hidden sm:inline">匯出 CSV</span>
+          </Button>
+        </div>
       </div>
 
       {/* Search Bar */}

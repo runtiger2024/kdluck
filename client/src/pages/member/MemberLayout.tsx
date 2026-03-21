@@ -1,10 +1,11 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { getLoginUrl } from "@/const";
-import { trpc } from "@/lib/trpc";
-import { User, BookOpen, ShoppingCart, Sparkles, Heart, StickyNote, Award, Bell, Shield } from "lucide-react";
+import { User, BookOpen, ShoppingCart, Sparkles, Heart, StickyNote, Award, Bell, Shield, Menu } from "lucide-react";
 import { useLocation } from "wouter";
+import { useState } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
@@ -20,9 +21,54 @@ const menuItems = [
   { icon: Sparkles, label: "推薦課程", path: "/member/recommend" },
 ];
 
+function SidebarContent({ user, location, setLocation, onNavigate }: {
+  user: any;
+  location: string;
+  setLocation: (path: string) => void;
+  onNavigate?: () => void;
+}) {
+  return (
+    <>
+      <div className="mb-6">
+        <Avatar className="h-16 w-16 border-2 border-border mb-3">
+          <AvatarImage src={user.avatarUrl ?? undefined} />
+          <AvatarFallback className="text-2xl bg-primary/10 text-primary">
+            {user.name?.charAt(0)?.toUpperCase() ?? "U"}
+          </AvatarFallback>
+        </Avatar>
+        <h2 className="font-bold text-lg">{user.name ?? "用戶"}</h2>
+        <p className="text-xs text-muted-foreground">{user.email ?? ""}</p>
+      </div>
+      <nav className="space-y-1">
+        {menuItems.map(item => {
+          const isActive = location === item.path;
+          return (
+            <button
+              key={item.path}
+              onClick={() => {
+                setLocation(item.path);
+                onNavigate?.();
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+                isActive ? "bg-primary/10 text-primary font-medium" : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
+              }`}
+            >
+              <item.icon className="h-4 w-4" />
+              {item.label}
+            </button>
+          );
+        })}
+      </nav>
+    </>
+  );
+}
+
 export default function MemberLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   const [location, setLocation] = useLocation();
+  const [sheetOpen, setSheetOpen] = useState(false);
+
+  const currentPage = menuItems.find(item => item.path === location)?.label ?? "會員中心";
 
   if (loading) {
     return (
@@ -48,37 +94,46 @@ export default function MemberLayout({ children }: { children: React.ReactNode }
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
-      <div className="container flex-1 py-8">
+
+      {/* 手機端頂部導航列 */}
+      <div className="md:hidden border-b border-border bg-card/50 sticky top-0 z-30">
+        <div className="container flex items-center justify-between py-3">
+          <div className="flex items-center gap-3">
+            <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-9 w-9">
+                  <Menu className="h-5 w-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-72 p-6">
+                <SidebarContent
+                  user={user}
+                  location={location}
+                  setLocation={setLocation}
+                  onNavigate={() => setSheetOpen(false)}
+                />
+              </SheetContent>
+            </Sheet>
+            <span className="font-medium text-sm">{currentPage}</span>
+          </div>
+          <Avatar className="h-8 w-8 border border-border">
+            <AvatarImage src={user.avatarUrl ?? undefined} />
+            <AvatarFallback className="text-xs bg-primary/10 text-primary">
+              {user.name?.charAt(0)?.toUpperCase() ?? "U"}
+            </AvatarFallback>
+          </Avatar>
+        </div>
+      </div>
+
+      <div className="container flex-1 py-4 md:py-8">
         <div className="flex flex-col md:flex-row gap-8">
-          {/* Sidebar */}
-          <aside className="w-full md:w-56 shrink-0">
-            <div className="mb-6">
-              <Avatar className="h-16 w-16 border-2 border-border mb-3">
-                <AvatarImage src={user.avatarUrl ?? undefined} />
-                <AvatarFallback className="text-2xl bg-primary/10 text-primary">
-                  {user.name?.charAt(0)?.toUpperCase() ?? "U"}
-                </AvatarFallback>
-              </Avatar>
-              <h2 className="font-bold text-lg">{user.name ?? "用戶"}</h2>
-              <p className="text-xs text-muted-foreground">{user.email ?? ""}</p>
-            </div>
-            <nav className="space-y-1">
-              {menuItems.map(item => {
-                const isActive = location === item.path;
-                return (
-                  <button
-                    key={item.path}
-                    onClick={() => setLocation(item.path)}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
-                      isActive ? "bg-primary/10 text-primary font-medium" : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
-                    }`}
-                  >
-                    <item.icon className="h-4 w-4" />
-                    {item.label}
-                  </button>
-                );
-              })}
-            </nav>
+          {/* 桌面端側邊欄 */}
+          <aside className="hidden md:block w-56 shrink-0">
+            <SidebarContent
+              user={user}
+              location={location}
+              setLocation={setLocation}
+            />
           </aside>
 
           {/* Content */}

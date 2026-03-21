@@ -132,14 +132,14 @@ export default function MemberProfile() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <h1 className="text-2xl font-bold">個人資料</h1>
         {!editing ? (
-          <Button variant="outline" onClick={() => setEditing(true)}>
+          <Button variant="outline" onClick={() => setEditing(true)} className="self-start sm:self-auto">
             <Pencil className="h-4 w-4 mr-2" />編輯資料
           </Button>
         ) : (
-          <div className="flex gap-2">
+          <div className="flex gap-2 self-start sm:self-auto">
             <Button variant="outline" onClick={() => { setEditing(false); if (profile) setForm({ name: profile.name ?? "", email: profile.email ?? "", phone: profile.phone ?? "", birthday: profile.birthday ?? "", gender: profile.gender ?? null, city: profile.city ?? "", address: profile.address ?? "", bio: profile.bio ?? "", occupation: profile.occupation ?? "", company: profile.company ?? "" }); }}>
               <X className="h-4 w-4 mr-2" />取消
             </Button>
@@ -196,7 +196,7 @@ export default function MemberProfile() {
         <CardHeader><CardTitle className="flex items-center gap-2"><User className="h-5 w-5" />基本資訊</CardTitle></CardHeader>
         <CardContent>
           {editing ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label>姓名</Label>
                 <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="您的姓名" />
@@ -230,20 +230,20 @@ export default function MemberProfile() {
                 <Label>所在城市</Label>
                 <Input value={form.city} onChange={e => setForm(f => ({ ...f, city: e.target.value }))} placeholder="台北市" />
               </div>
-              <div className="col-span-1 md:col-span-2">
+              <div className="col-span-1 sm:col-span-2">
                 <Label>詳細地址</Label>
                 <Input value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} placeholder="完整地址（選填）" />
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-8">
               <InfoRow icon={<User className="h-4 w-4" />} label="姓名" value={profile?.name} />
               <InfoRow icon={<Mail className="h-4 w-4" />} label="Email" value={profile?.email} />
               <InfoRow icon={<Phone className="h-4 w-4" />} label="電話" value={profile?.phone} />
               <InfoRow icon={<Calendar className="h-4 w-4" />} label="生日" value={profile?.birthday} />
               <InfoRow icon={<User className="h-4 w-4" />} label="性別" value={profile?.gender ? genderLabels[profile.gender] : undefined} />
               <InfoRow icon={<MapPin className="h-4 w-4" />} label="所在城市" value={profile?.city} />
-              {profile?.address && <div className="col-span-1 md:col-span-2"><InfoRow icon={<MapPin className="h-4 w-4" />} label="詳細地址" value={profile.address} /></div>}
+              {profile?.address && <div className="col-span-1 sm:col-span-2"><InfoRow icon={<MapPin className="h-4 w-4" />} label="詳細地址" value={profile.address} /></div>}
             </div>
           )}
         </CardContent>
@@ -253,8 +253,8 @@ export default function MemberProfile() {
       <Card className="bg-card border-border">
         <CardHeader><CardTitle className="flex items-center gap-2"><Briefcase className="h-5 w-5" />職業資訊</CardTitle></CardHeader>
         <CardContent>
-          {editing ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {editing ? (            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4
+">
               <div>
                 <Label>職業</Label>
                 <Input value={form.occupation} onChange={e => setForm(f => ({ ...f, occupation: e.target.value }))} placeholder="軟體工程師" />
@@ -265,7 +265,7 @@ export default function MemberProfile() {
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-8">
               <InfoRow icon={<Briefcase className="h-4 w-4" />} label="職業" value={profile?.occupation} />
               <InfoRow icon={<Building2 className="h-4 w-4" />} label="公司 / 機構" value={profile?.company} />
             </div>

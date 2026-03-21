@@ -251,3 +251,22 @@
 - [x] 前端：全部停用時顯示提示訊息並禁用確認按鈕
 - [x] 前端：自動選擇第一個可用的付款方式
 - [x] 撰寫 Vitest 測試（169 tests passed）
+
+## 會員中心手機端響應式優化
+- [x] MemberLayout：側邊欄改為手機端抽屜式導航（Sheet 元件）
+- [x] MemberProfile：表單手機端單欄排列（標題按鈕堆疊）
+- [x] MemberOrders：訂單表格改為手機端卡片式
+- [x] MemberNotifications：通知列表手機端按鈕常駐顯示
+- [x] MemberSecurity：帳號安全頁面手機端排版優化
+
+## 管理後台訂單批量審核
+- [x] 後端：新增 batchReview API（批量通過/駐回付款憑證）
+- [x] 前端：訂單管理頁面加入全選/多選功能（checkbox）
+- [x] 前端：批量通過/駐回按鈕與確認對話框
+
+## 管理後台數據匯出
+- [x] 後端：訂單匯出 API（exportOrders，支持狀態筛選）
+- [x] 後端：用戶匯出 API（exportUsers）
+- [x] 前端：訂單管理頁面加入匯出 CSV 按鈕
+- [x] 前端：用戶管理頁面加入匯出 CSV 按鈕
+- [x] 撰寫 Vitest 測試（178 tests passed）
